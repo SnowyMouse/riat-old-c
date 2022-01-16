@@ -44,7 +44,7 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
         /* Error? */
         if(info.is_error) {
             /* Clean up tokens */
-            RIAT_free_token_array(*tokens, *token_count);
+            RIAT_token_free_array(*tokens, *token_count);
 
             /* Report the error */
             snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "token error: %s", info.error_reason);
@@ -62,7 +62,7 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
         char *token_str = malloc(info.length + 1);
         if(!token_str) {
             /* Clean up tokens */
-            RIAT_free_token_array(*tokens, *token_count);
+            RIAT_token_free_array(*tokens, *token_count);
 
             /* Report the error */
             COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR);
@@ -75,7 +75,7 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
 
             /* Did that fail? Oops! */
             if(tokens_new == NULL) {
-                RIAT_free_token_array(*tokens, *token_count);
+                RIAT_token_free_array(*tokens, *token_count);
                 instance->last_compile_error.result_int = RIAT_COMPILE_ALLOCATION_ERROR;
                 COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR);
             }
@@ -144,7 +144,7 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
         /* Did we go negative?? */
         if(depth < 0) {
             /* Clean up tokens */
-            RIAT_free_token_array(*tokens, *token_count);
+            RIAT_token_free_array(*tokens, *token_count);
 
             /* Report the error */
             snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "token error: right parenthesis without matching left");

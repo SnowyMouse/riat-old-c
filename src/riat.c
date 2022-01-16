@@ -67,11 +67,11 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t
 
     printf("TODO: %s()\n", __func__);
 
-    RIAT_free_token_array(tokens, token_count);
+    RIAT_token_free_array(tokens, token_count);
     return result;
 }
 
-void RIAT_free_token_array(RIAT_Token *tokens, size_t token_count) {
+void RIAT_token_free_array(RIAT_Token *tokens, size_t token_count) {
     for(size_t i = 0; i < token_count; i++) {
         free(tokens[i].token_string);
     }

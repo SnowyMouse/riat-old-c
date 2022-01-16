@@ -37,7 +37,7 @@ typedef struct RIAT_Token {
  * @param tokens      pointer to first token to free
  * @param token_count number of tokens
  */
-void RIAT_free_token_array(RIAT_Token *tokens, size_t token_count);
+void RIAT_token_free_array(RIAT_Token *tokens, size_t token_count);
 
 /**
  * Parse the script source data into tokens
