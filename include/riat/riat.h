@@ -82,6 +82,14 @@ typedef enum RIAT_ValueType {
     RIAT_VALUE_TYPE_SCENERY_NAME
 } RIAT_ValueType;
 
+typedef enum RIAT_ScriptType {
+    RIAT_SCRIPT_TYPE_STATIC,
+    RIAT_SCRIPT_TYPE_CONTINUOUS,
+    RIAT_SCRIPT_TYPE_STARTUP,
+    RIAT_SCRIPT_TYPE_DORMANT,
+    RIAT_SCRIPT_TYPE_STUB
+} RIAT_ScriptType;
+
 /**
  * Make an instance
  * 

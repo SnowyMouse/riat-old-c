@@ -27,17 +27,17 @@ const char *RIAT_instance_get_last_compile_error(const RIAT_Instance *instance, 
     }
 }
 
+#define COMPILE_RETURN_ERROR(what) \
+    instance->last_compile_error.result_int = what; \
+    return what;
+
 /* Do the thing. If it doesn't return OK, give up */
 #define COMPILE_TRY(...) {\
     RIAT_CompileResult result = __VA_ARGS__; \
     if(result != RIAT_COMPILE_OK) { \
-        return result; \
+        COMPILE_RETURN_ERROR(result); \
     } \
 }
-
-#define COMPILE_RETURN_ERROR(what) \
-    instance->last_compile_error.result_int = what; \
-    return what;
 
 RIAT_CompileResult RIAT_instance_compile_script(RIAT_Instance *instance, const char *script_source_data, size_t script_source_length, const char *file_name) {
     /* Clear the error */
@@ -60,15 +60,6 @@ void RIAT_instance_delete(RIAT_Instance *instance) {
     }
 
     free(instance);
-}
-
-RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t token_count) {
-    RIAT_CompileResult result = RIAT_COMPILE_OK;
-
-    printf("TODO: %s()\n", __func__);
-
-    RIAT_token_free_array(tokens, token_count);
-    return result;
 }
 
 void RIAT_token_free_array(RIAT_Token *tokens, size_t token_count) {

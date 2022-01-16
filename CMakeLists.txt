@@ -10,6 +10,7 @@ project("Rat In a Tube"
 add_library(riat
     src/riat.c
     src/riat_token.c
+    src/riat_tree.c
 )
 set_property(TARGET riat PROPERTY C_STANDARD 11)
 

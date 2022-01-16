@@ -14,10 +14,10 @@ typedef struct TokenInfo {
 
 static const char *find_next_token(const char *script_source_data, size_t source_data_length, size_t *current_line, size_t *current_column, TokenInfo *info);
 
-#define COMPILE_RETURN_ERROR(what) \
+#define COMPILE_RETURN_ERROR(what, explanation_fmt, ...) \
+    if(explanation_fmt) snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), explanation_fmt, __VA_ARGS__); \
     instance->last_compile_error.syntax_error_line = line; \
     instance->last_compile_error.syntax_error_column = column; \
-    instance->last_compile_error.result_int = what; \
     return what;
 
 RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_source_data, size_t script_source_length, const char *file_name, RIAT_Token **tokens, size_t *token_count) {
@@ -33,7 +33,7 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
     /* Nope lol */
     if(tokens == NULL) {
         instance->last_compile_error.result_int = RIAT_COMPILE_ALLOCATION_ERROR;
-        COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR);
+        COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR, NULL, NULL);
     }
 
     /* Go through each token */
@@ -47,10 +47,9 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
             RIAT_token_free_array(*tokens, *token_count);
 
             /* Report the error */
-            snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "token error: %s", info.error_reason);
             line = info.line;
             column = info.column;
-            COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR);
+            COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, "token error: %s", info.error_reason);
         }
 
         /* Last token gotten? */
@@ -65,7 +64,7 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
             RIAT_token_free_array(*tokens, *token_count);
 
             /* Report the error */
-            COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR);
+            COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR, NULL, NULL);
         }
 
         /* If we hit the max capacity, double it */
@@ -77,7 +76,7 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
             if(tokens_new == NULL) {
                 RIAT_token_free_array(*tokens, *token_count);
                 instance->last_compile_error.result_int = RIAT_COMPILE_ALLOCATION_ERROR;
-                COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR);
+                COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR, NULL, NULL);
             }
 
             /* Done! */
@@ -147,17 +146,15 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
             RIAT_token_free_array(*tokens, *token_count);
 
             /* Report the error */
-            snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "token error: right parenthesis without matching left");
             line = (*tokens)[i].line;
             column = (*tokens)[i].column;
-            COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR);
+            COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, "token error: right parenthesis without matching left", NULL);
         }
     }
     if(depth > 0) {
-        snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "token error: left parenthesis without matching right");
         line = (*tokens)[d1].line;
         column = (*tokens)[d1].column;
-        COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR);
+        COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, "token error: left parenthesis without matching right", NULL);
     }
 
     return RIAT_COMPILE_OK;

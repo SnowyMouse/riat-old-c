@@ -31,6 +31,8 @@ typedef struct RIAT_Token {
     char parenthesis;
 } RIAT_Token;
 
+
+
 /**
  * Free the token array
  * 
@@ -62,10 +64,15 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t
 
 typedef struct RIAT_Global {
     char name[32];
+    size_t first_node;
+    RIAT_ValueType value_type;
 } RIAT_Global;
 
 typedef struct RIAT_Script {
     char name[32];
+    size_t first_node;
+    RIAT_ValueType return_type;
+    RIAT_ScriptType script_type;
 } RIAT_Script;
 
 #endif
