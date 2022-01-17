@@ -57,6 +57,22 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
             break;
         }
 
+        /* If we hit the max capacity, double it before adding the next one */
+        if(*token_count == token_capacity) {
+            token_capacity *= 2;
+            RIAT_Token *tokens_new = realloc(*tokens, sizeof(**tokens) * token_capacity);
+
+            /* Did that fail? Oops! */
+            if(tokens_new == NULL) {
+                RIAT_token_free_array(*tokens, *token_count);
+                instance->last_compile_error.result_int = RIAT_COMPILE_ALLOCATION_ERROR;
+                COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR, NULL, NULL);
+            }
+
+            /* Done! */
+            *tokens = tokens_new;
+        }
+
         /* Is this token parenthesis? */
         const char *next_token_data = next_token;
         size_t next_token_length = info.length;
@@ -89,26 +105,9 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
             /* Report the error */
             COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR, NULL, NULL);
         }
-
-        /* If we hit the max capacity, double it */
-        if(*token_count == token_capacity) {
-            token_capacity *= 2;
-            RIAT_Token *tokens_new = realloc(*tokens, sizeof(**tokens) * token_capacity);
-
-            /* Did that fail? Oops! */
-            if(tokens_new == NULL) {
-                RIAT_token_free_array(*tokens, *token_count);
-                free(token_str);
-                instance->last_compile_error.result_int = RIAT_COMPILE_ALLOCATION_ERROR;
-                COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR, NULL, NULL);
-            }
-
-            /* Done! */
-            *tokens = tokens_new;
-        }
         
         /* Get our new token */
-        RIAT_Token *this_token = *tokens + *token_count;
+        RIAT_Token *this_token = &(*tokens)[*token_count];
         this_token->file = instance->files.file_names_count;
         this_token->column = info.column;
         this_token->line = info.line;
