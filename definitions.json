@@ -4,23 +4,28 @@
     "engines": [
         {
             "identifier": "xbox",
-            "description": "Halo: Combat Evolved on Xbox"
+            "description": "Halo: Combat Evolved on Xbox (English USA version) as released by Bungie",
+            "build": "01.10.12.2276"
         },
         {
             "identifier": "gbx-retail",
-            "description": "Halo: Combat Evolved on PC as released by Gearbox"
+            "description": "Halo: Combat Evolved on PC as released by Gearbox",
+            "build": "01.00.10.0621"
         },
         {
             "identifier": "gbx-demo",
-            "description": "Halo: Combat Evolved demo on PC as released by Gearbox"
+            "description": "Halo: Combat Evolved demo on PC as released by Gearbox",
+            "build": "01.00.00.0578"
         },
         {
             "identifier": "gbx-custom",
-            "description": "Halo Custom Edition on PC as released by Gearbox"
+            "description": "Halo Custom Edition on PC as released by Gearbox",
+            "build": "01.00.10.0621"
         },
         {
             "identifier": "mcc-cea",
-            "description": "Halo: Combat Evolved Anniversary on MCC as released by 343: Industries"
+            "description": "Halo: Combat Evolved Anniversary on MCC (PC version) as released by 343 Industries",
+            "build": "01.03.43.0000"
         }
     ],
     "functions": [
