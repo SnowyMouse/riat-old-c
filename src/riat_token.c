@@ -57,8 +57,31 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
             break;
         }
 
+        /* Is this token parenthesis? */
+        const char *next_token_data = next_token;
+        size_t next_token_length = info.length;
+        char parenthesis;
+
+        /* Enclosed in quotes? If so, reduce length by 2 and increment pointer by 1 so we get the contents inside */
+        if(*next_token == '"') {
+            next_token_length -= 2;
+            next_token_data++;
+            parenthesis = 0;
+        }
+        else if(*next_token == '(') {
+            parenthesis = +1;
+        }
+        else if(*next_token == ')') {
+            parenthesis = -1;
+        }
+        else {
+            parenthesis = 0;
+        }
+
+        /* Copy it */
+        char *token_str = strndup(next_token_data, next_token_length);
+
         /* Allocate space for the token (as a string) so we can use it later */
-        char *token_str = malloc(info.length + 1);
         if(!token_str) {
             /* Clean up tokens */
             RIAT_token_free_array(*tokens, *token_count);
@@ -75,6 +98,7 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
             /* Did that fail? Oops! */
             if(tokens_new == NULL) {
                 RIAT_token_free_array(*tokens, *token_count);
+                free(token_str);
                 instance->last_compile_error.result_int = RIAT_COMPILE_ALLOCATION_ERROR;
                 COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR, NULL, NULL);
             }
@@ -89,31 +113,7 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
         this_token->column = info.column;
         this_token->line = info.line;
         this_token->token_string = token_str;
-        token_str[info.length] = 0; /* null terminate */
-
-        /* Is it a quoted string? If so, copy only the inner portion */
-        if(*next_token == '"') {
-            memcpy(token_str, next_token + 1, info.length - 2);
-
-            token_str[info.length - 2] = 0; /* null terminate these as well! */
-            token_str[info.length - 1] = 0;
-        }
-
-        /* Otherwise, copy it as-is */
-        else {
-            memcpy(token_str, next_token, info.length);
-
-            /* Unquoted parenthesis? */
-            if(*next_token == '(') {
-                this_token->parenthesis = +1;
-            }
-            else if(*next_token == ')') {
-                this_token->parenthesis = -1;
-            }
-            else {
-                this_token->parenthesis = 0;
-            }
-        }
+        this_token->parenthesis = parenthesis;
 
         (*token_count)++;
 
