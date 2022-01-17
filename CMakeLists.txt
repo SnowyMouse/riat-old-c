@@ -7,12 +7,20 @@ project("Rat In a Tube"
     LANGUAGES C CXX
 )
 
+find_package(Python3 REQUIRED)
+
 add_library(riat
     src/riat.c
+    src/definition/definition.c
     src/riat_token.c
     src/riat_tree.c
 )
 set_property(TARGET riat PROPERTY C_STANDARD 11)
+
+add_custom_command (OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/src/definition/definition.c"
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/src/definition/definition_codegen.py" "${CMAKE_CURRENT_SOURCE_DIR}/src/definition/definition.json" "${CMAKE_CURRENT_SOURCE_DIR}/src/definition/definition.c"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/definition/definition_codegen.py" "${CMAKE_CURRENT_SOURCE_DIR}/src/definition/definition.json"
+)
 
 add_executable(riat-test
     main.cpp

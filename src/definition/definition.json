@@ -36,8 +36,7 @@
             "parameters": [
                 {
                     "many": true,
-                    "type": "expression",
-                    "passthrough": true,
+                    "type": "passthrough",
                     "passthrough_last": true
                 }
             ],
@@ -56,8 +55,7 @@
             "parameters": [
                 {
                     "many": true,
-                    "type": "expression",
-                    "passthrough": true
+                    "type": "passthrough"
                 }
             ],
             "engines": {
@@ -78,8 +76,7 @@
                     "type": "boolean"
                 },
                 {
-                    "type": "expression",
-                    "passthrough": true
+                    "type": "passthrough"
                 }
             ],
             "engines": {
@@ -99,13 +96,11 @@
                     "type": "boolean"
                 },
                 {
-                    "type": "expression",
-                    "passthrough": true
+                    "type": "passthrough"
                 },
                 {
-                    "type": "expression",
-                    "optional": true,
-                    "passthrough": true
+                    "type": "passthrough",
+                    "optional": true
                 }
             ],
             "engines": {
@@ -125,8 +120,7 @@
                     "type": "string"
                 },
                 {
-                    "type": "expression",
-                    "passthrough": true
+                    "type": "passthrough"
                 }
             ],
             "engines": {
@@ -180,7 +174,7 @@
             "parameters": [
                 {
                     "many": true,
-                    "type": "number"
+                    "type": "real"
                 }
             ],
             "engines": {
@@ -197,10 +191,10 @@
             "description": "returns the difference of two expressions.",
             "parameters": [
                 {
-                    "type": "number"
+                    "type": "real"
                 },
                 {
-                    "type": "number"
+                    "type": "real"
                 }
             ],
             "engines": {
@@ -218,7 +212,7 @@
             "parameters": [
                 {
                     "many": true,
-                    "type": "number"
+                    "type": "real"
                 }
             ],
             "engines": {
@@ -235,10 +229,10 @@
             "description": "returns the quotient of two expressions.",
             "parameters": [
                 {
-                    "type": "number"
+                    "type": "real"
                 },
                 {
-                    "type": "number"
+                    "type": "real"
                 }
             ],
             "engines": {
@@ -256,7 +250,7 @@
             "parameters": [
                 {
                     "many": true,
-                    "type": "number"
+                    "type": "real"
                 }
             ],
             "engines": {
@@ -274,7 +268,7 @@
             "parameters": [
                 {
                     "many": true,
-                    "type": "number"
+                    "type": "real"
                 }
             ],
             "engines": {
@@ -291,10 +285,10 @@
             "description": "returns true if two expressions are equal",
             "parameters": [
                 {
-                    "type": "expression"
+                    "type": "passthrough"
                 },
                 {
-                    "type": "expression"
+                    "type": "passthrough"
                 }
             ],
             "engines": {
@@ -311,10 +305,10 @@
             "description": "returns true if two expressions are not equal",
             "parameters": [
                 {
-                    "type": "expression"
+                    "type": "passthrough"
                 },
                 {
-                    "type": "expression"
+                    "type": "passthrough"
                 }
             ],
             "engines": {
@@ -331,10 +325,10 @@
             "description": "returns true if the first number is larger than the second.",
             "parameters": [
                 {
-                    "type": "number"
+                    "type": "real"
                 },
                 {
-                    "type": "number"
+                    "type": "real"
                 }
             ],
             "engines": {
@@ -351,10 +345,10 @@
             "description": "returns true if the first number is smaller than the second.",
             "parameters": [
                 {
-                    "type": "number"
+                    "type": "real"
                 },
                 {
-                    "type": "number"
+                    "type": "real"
                 }
             ],
             "engines": {
@@ -371,10 +365,10 @@
             "description": "returns true if the first number is larger than or equal to the second.",
             "parameters": [
                 {
-                    "type": "number"
+                    "type": "real"
                 },
                 {
-                    "type": "number"
+                    "type": "real"
                 }
             ],
             "engines": {
@@ -391,10 +385,10 @@
             "description": "returns true if the first number is smaller than or equal to the second.",
             "parameters": [
                 {
-                    "type": "number"
+                    "type": "real"
                 },
                 {
-                    "type": "number"
+                    "type": "real"
                 }
             ],
             "engines": {
@@ -470,7 +464,7 @@
             "description": "prints the value of an expression to the screen for debugging purposes.",
             "parameters": [
                 {
-                    "type": "expression"
+                    "type": "passthrough"
                 }
             ],
             "engines": {
