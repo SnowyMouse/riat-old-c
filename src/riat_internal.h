@@ -2,6 +2,7 @@
 #define RIAT_INTERNAL_H
 
 #include "../include/riat/riat.h"
+#include <stdbool.h>
 
 typedef struct RIAT_Instance {
     /* Compiled files */
@@ -74,5 +75,25 @@ typedef struct RIAT_Script {
     RIAT_ValueType return_type;
     RIAT_ScriptType script_type;
 } RIAT_Script;
+
+/**
+ * Convert a string to a script type
+ * 
+ * @param type  string
+ * @param error (output) pointer to error boolean which is set to true if error and false if not
+ * 
+ * @return      script type
+ */
+RIAT_ScriptType RIAT_script_type_from_string(const char *type, bool *error);
+
+/**
+ * Convert a string to a value type
+ * 
+ * @param type  string
+ * @param error (output) pointer to error boolean which is set to true if error and false if not
+ * 
+ * @return      value type
+ */
+RIAT_ValueType RIAT_value_type_from_string(const char *type, bool *error);
 
 #endif

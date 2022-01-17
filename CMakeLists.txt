@@ -14,6 +14,7 @@ add_library(riat
     src/definition/definition.c
     src/riat_token.c
     src/riat_tree.c
+    src/riat_value_type.c
 )
 set_property(TARGET riat PROPERTY C_STANDARD 11)
 
