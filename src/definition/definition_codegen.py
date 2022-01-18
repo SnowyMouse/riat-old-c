@@ -20,9 +20,9 @@ for n in everything:
 
     def resolve_index(w,t):
         if t not in w:
-            return 0xFFFF
+            return "RIAT_BUILTIN_DEFINITION_INDEX_NOT_PRESENT"
         elif w[t] == None:
-            return 0xFFFE
+            return "RIAT_BUILTIN_DEFINITION_INDEX_UNKNOWN"
         else:
             return w[t]
 

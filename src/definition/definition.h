@@ -22,7 +22,7 @@ typedef struct RIAT_BuiltinDefinition {
     RIAT_BuiltinDefinitionType type;
     RIAT_ValueType value_type;
     
-    /* If 65535, then it's not present in the target engine. If 65534, then it's present but the index is unknown. */
+    /* Check RIAT_BuiltinDefinitionIndexError */
     uint16_t index_gbx_custom;
     uint16_t index_gbx_demo;
     uint16_t index_gbx_retail;
@@ -32,6 +32,14 @@ typedef struct RIAT_BuiltinDefinition {
     uint16_t parameter_count;
     RIAT_BuiltinFunctionParameter parameters[6];
 } RIAT_BuiltinDefinition;
+
+enum RIAT_BuiltinDefinitionIndexError {
+    /* Not present in target engine */
+    RIAT_BUILTIN_DEFINITION_INDEX_NOT_PRESENT = 65535,
+
+    /* Present in target engine but unknown */
+    RIAT_BUILTIN_DEFINITION_INDEX_UNKNOWN = 65534
+};
 
 RIAT_BuiltinDefinition *RIAT_builtin_definition_search(const char *what);
 
