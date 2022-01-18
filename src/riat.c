@@ -59,7 +59,17 @@ void RIAT_instance_delete(RIAT_Instance *instance) {
         return;
     }
 
+    RIAT_clear_node_array_container(&instance->nodes);
     free(instance);
+}
+
+void RIAT_clear_node_array_container(RIAT_ScriptNodeArrayContainer *container) {
+    for(size_t i = 0; i < container->nodes_count; i++) {
+        free(container->nodes[i].string_data);
+    }
+    free(container->nodes);
+    container->nodes_capacity = 0;
+    container->nodes_count = 0;
 }
 
 void RIAT_token_free_array(RIAT_Token *tokens, size_t token_count) {

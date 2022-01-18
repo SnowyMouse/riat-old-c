@@ -3,6 +3,75 @@
 
 #include "../include/riat/riat.h"
 #include <stdbool.h>
+#include <stdint.h>
+
+#ifndef __has_builtin
+    #define __has_builtin(x) 0
+#endif
+
+#if defined (_MSC_VER)
+    #define UNREACHABLE() __assume(0)
+#elif __has_builtin(__builtin_unreachable)
+    #define UNREACHABLE() __builtin_unreachable()
+#else
+    #define UNREACHABLE() abort()
+#endif
+
+#define NEXT_NODE_NULL (SIZE_MAX)
+
+/* Script node */
+typedef struct RIAT_ScriptNode {
+    /* String data (NULL if none) */
+    char *string_data;
+
+    /* Next node index? */
+    size_t next_node;
+
+    /* Value type */
+    RIAT_ValueType type;
+
+    /* If this is false, it's a function call */
+    bool is_primitive;
+
+    /* Relevant file */
+    size_t file;
+
+    /* Relevant line */
+    size_t line;
+
+    /* Relevant column */
+    size_t column;
+
+    /* Used if not primitive or if a primitive number/boolean type */ 
+    union {
+        /* Child node (if not primitive) */
+        size_t child_node;
+
+        /* 32-bit integer (if primitive long) */
+        int32_t long_int;
+
+        /* 16-bit integer (if primitive short) */
+        int16_t short_int;
+
+        /* 8-bit integer (if primitive boolean) */
+        int8_t bool_int;
+
+        /* 32-bit float (if primitive real) */
+        float real;
+    };
+} RIAT_ScriptNode;
+
+/* Node array container */
+typedef struct RIAT_ScriptNodeArrayContainer {
+    /* Pointer to first node (or NULL) */
+    RIAT_ScriptNode *nodes;
+
+    /* Number of nodes in the array that are valid */
+    size_t nodes_count;
+
+    /* Number of nodes in the array that can fit */
+    size_t nodes_capacity;
+} RIAT_ScriptNodeArrayContainer;
 
 typedef struct RIAT_Instance {
     /* Compiled files */
@@ -20,6 +89,9 @@ typedef struct RIAT_Instance {
         size_t syntax_error_line;
         size_t syntax_error_column;
     } last_compile_error;
+
+    /* All current nodes */
+    RIAT_ScriptNodeArrayContainer nodes;
 } RIAT_Instance;
 
 typedef struct RIAT_Token {
@@ -31,8 +103,6 @@ typedef struct RIAT_Token {
     /* Left = +1. Right = -1. None = 0 */
     char parenthesis;
 } RIAT_Token;
-
-
 
 /**
  * Free the token array
@@ -74,7 +144,17 @@ typedef struct RIAT_Script {
     size_t first_node;
     RIAT_ValueType return_type;
     RIAT_ScriptType script_type;
+
+    bool is_function_call;
+    size_t function_call_first_element;
 } RIAT_Script;
+
+/**
+ * Free the node array container
+ * 
+ * @param container container to free
+ */
+void RIAT_clear_node_array_container(RIAT_ScriptNodeArrayContainer *container);
 
 /**
  * Convert a string to a script type
