@@ -14,13 +14,14 @@ RIAT_Instance *RIAT_instance_new() {
     return instance;
 }
 
-const char *RIAT_instance_get_last_compile_error(const RIAT_Instance *instance, size_t *line, size_t *column) {
+const char *RIAT_instance_get_last_compile_error(const RIAT_Instance *instance, size_t *line, size_t *column, size_t *file) {
     switch(instance->last_compile_error.result_int) {
         case RIAT_COMPILE_OK:
             return NULL;
         case RIAT_COMPILE_SYNTAX_ERROR:
             *line = instance->last_compile_error.syntax_error_line;
             *column = instance->last_compile_error.syntax_error_column;
+            *file = instance->last_compile_error.syntax_error_file;
             return instance->last_compile_error.syntax_error_explanation;
         case RIAT_COMPILE_ALLOCATION_ERROR:
             return "allocation error";

@@ -88,6 +88,7 @@ typedef struct RIAT_Instance {
         char syntax_error_explanation[512];
         size_t syntax_error_line;
         size_t syntax_error_column;
+        size_t syntax_error_file;
     } last_compile_error;
 
     /* All current nodes */
@@ -137,6 +138,8 @@ typedef struct RIAT_Global {
     char name[32];
     size_t first_node;
     RIAT_ValueType value_type;
+
+    size_t line, column, file;
 } RIAT_Global;
 
 typedef struct RIAT_Script {
@@ -147,6 +150,8 @@ typedef struct RIAT_Script {
 
     bool is_function_call;
     size_t function_call_first_element;
+
+    size_t line, column, file;
 } RIAT_Script;
 
 /**

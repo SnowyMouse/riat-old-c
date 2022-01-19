@@ -137,8 +137,9 @@ RIAT_CompileResult RIAT_instance_compile_script(RIAT_Instance *instance, const c
  * @param instance  instance to check
  * @param line      set to the line where the error occurred (if applicable)
  * @param column    set to the column where the error occurred (if applicable)
+ * @param file      set to the file where the error occurred (if applicable)
  */
-const char *RIAT_instance_get_last_compile_error(const RIAT_Instance *instance, size_t *line, size_t *column);
+const char *RIAT_instance_get_last_compile_error(const RIAT_Instance *instance, size_t *line, size_t *column, size_t *file);
 
 #ifdef __cplusplus
 }

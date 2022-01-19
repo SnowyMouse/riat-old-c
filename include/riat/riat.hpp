@@ -23,7 +23,7 @@ namespace RIAT {
     class SyntaxException : public Exception {
     public:
         SyntaxException(const RIAT_Instance &instance) noexcept {
-            this->reason = RIAT_instance_get_last_compile_error(&instance, &this->line, &this->column);
+            this->reason = RIAT_instance_get_last_compile_error(&instance, &this->line, &this->column, &this->file);
 
             char what_error_c[256];
             std::snprintf(what_error_c, sizeof(what_error_c), "%s @ %zu:%zu", this->reason.c_str(), this->line, this->column);
@@ -38,6 +38,9 @@ namespace RIAT {
         std::size_t get_column() const noexcept {
             return this->column;
         }
+        std::size_t get_file() const noexcept {
+            return this->file;
+        }
         const char *get_reason() const noexcept {
             return this->reason.c_str();
         }
@@ -46,6 +49,7 @@ namespace RIAT {
         std::string what_error;
         std::size_t line;
         std::size_t column;
+        std::size_t file;
         std::string reason;
     };
 

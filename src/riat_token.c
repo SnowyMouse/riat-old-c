@@ -18,12 +18,13 @@ static const char *find_next_token(const char *script_source_data, size_t source
     if(explanation_fmt) snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), explanation_fmt, __VA_ARGS__); \
     instance->last_compile_error.syntax_error_line = line; \
     instance->last_compile_error.syntax_error_column = column; \
+    instance->last_compile_error.syntax_error_file = file; \
     return what;
 
 RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_source_data, size_t script_source_length, const char *file_name, RIAT_Token **tokens, size_t *token_count) {
     const char *tokenizer_data = script_source_data;
     size_t tokenizer_length = script_source_length;
-    size_t line = 1, column = 1;
+    size_t line = 1, column = 1, file = instance->files.file_names_count - 1;
 
     /* Allocate tokens here */
     *token_count = 0;
@@ -108,7 +109,7 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
         
         /* Get our new token */
         RIAT_Token *this_token = &(*tokens)[*token_count];
-        this_token->file = instance->files.file_names_count;
+        this_token->file = file;
         this_token->column = info.column;
         this_token->line = info.line;
         this_token->token_string = token_str;

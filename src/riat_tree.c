@@ -36,9 +36,191 @@ static RIAT_CompileResult read_next_element(
     size_t *node
 );
 
+static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_ScriptNodeArrayContainer *nodes, size_t node, RIAT_ValueType preferred_type, const RIAT_ScriptGlobalContainer *script_globals);
+
+#define RESOLVE_TYPE_OF_ELEMENT_FAIL(...) \
+    instance->last_compile_error.syntax_error_file = n->file; \
+    instance->last_compile_error.syntax_error_line = n->line; \
+    instance->last_compile_error.syntax_error_column = n->column; \
+    instance->last_compile_error.result_int = RIAT_COMPILE_SYNTAX_ERROR; \
+    snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), __VA_ARGS__); \
+    return RIAT_COMPILE_SYNTAX_ERROR;
+
+static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_ScriptNodeArrayContainer *nodes, size_t node, RIAT_ValueType preferred_type, const RIAT_ScriptGlobalContainer *script_globals) {
+    RIAT_ScriptNode *n = &nodes->nodes[node];
+
+    bool numeric_preferred = preferred_type == RIAT_VALUE_TYPE_REAL || preferred_type == RIAT_VALUE_TYPE_LONG || preferred_type == RIAT_VALUE_TYPE_SHORT;
+
+    /* TODO: HANDLE GLOBALS */
+    
+    if(n->is_primitive) {
+        switch(preferred_type) {
+            case RIAT_VALUE_TYPE_VOID:
+                RESOLVE_TYPE_OF_ELEMENT_FAIL("a void type was expected; got '%s' instead", n->string_data);
+            case RIAT_VALUE_TYPE_UNPARSED:
+                abort();
+            case RIAT_VALUE_TYPE_BOOLEAN:
+                if(strcmp(n->string_data, "true") == 0 || strcmp(n->string_data, "1") == 0) {
+                    n->bool_int = 1;
+                }
+                else if(strcmp(n->string_data, "false") == 0 || strcmp(n->string_data, "0") == 0) {
+                    n->bool_int = 0;
+                }
+                else {
+                    RESOLVE_TYPE_OF_ELEMENT_FAIL("a boolean type (i.e. 'false'/'true'/'0'/'1') was expected; got '%s' instead", n->string_data);
+                }
+                free(n->string_data);
+                n->string_data = NULL;
+                break;
+            case RIAT_VALUE_TYPE_REAL:
+                {
+                    char *end = NULL;
+                    n->real = strtof(n->string_data, &end);
+                    if(end == n->string_data) {
+                        RESOLVE_TYPE_OF_ELEMENT_FAIL("a real type was expected; got '%s' instead", n->string_data);
+                    }
+                }
+                free(n->string_data);
+                n->string_data = NULL;
+                break;
+            case RIAT_VALUE_TYPE_SHORT:
+                {
+                    char *end = NULL;
+                    long long v = strtoll(n->string_data, &end, 10);
+                    if(end == n->string_data) {
+                        RESOLVE_TYPE_OF_ELEMENT_FAIL("a short type was expected; got '%s' instead", n->string_data);
+                    }
+                    if(v < INT16_MIN || v > INT16_MAX) {
+                        RESOLVE_TYPE_OF_ELEMENT_FAIL("a short type was expected; got '%s' (out of range) instead", n->string_data);
+                    }
+                    n->short_int = (short)v;
+                }
+                free(n->string_data);
+                n->string_data = NULL;
+                break;
+            case RIAT_VALUE_TYPE_LONG:
+                {
+                    char *end = NULL;
+                    long long v = strtoll(n->string_data, &end, 10);
+                    if(end == n->string_data) {
+                        RESOLVE_TYPE_OF_ELEMENT_FAIL("a long type was expected; got '%s' instead", n->string_data);
+                    }
+                    if(v < INT32_MIN || v > INT32_MAX) {
+                        RESOLVE_TYPE_OF_ELEMENT_FAIL("a long type was expected; got '%s' (out of range) instead", n->string_data);
+                    }
+                    n->long_int = (long)v;
+                }
+                free(n->string_data);
+                n->string_data = NULL;
+                break;
+            default:
+                break;
+        }
+        n->type = preferred_type;
+    }
+    else {
+        return resolve_type_of_block(instance, nodes, node, preferred_type, script_globals);
+    }
+
+    return RIAT_COMPILE_OK;
+}
+
+static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_ScriptNodeArrayContainer *nodes, size_t node, RIAT_ValueType preferred_type, const RIAT_ScriptGlobalContainer *script_globals) {
+    RIAT_ScriptNode *n = &nodes->nodes[node];
+
+    /* Duh. This needs to be a block. */
+    assert(!n->is_primitive);
+
+    /* First element needs to be a function name */
+    RIAT_ScriptNode *function_name_node = &nodes->nodes[n->child_node];
+    assert(function_name_node->is_primitive);
+    function_name_node->type = RIAT_VALUE_TYPE_FUNCTION_NAME;
+    const char *function_name = function_name_node->string_data;
+
+    const RIAT_Script *script = NULL;
+    RIAT_BuiltinDefinition *definition = NULL;
+    size_t max_arguments = 0;
+
+    /* Erroring? */
+    bool local_global_exists = false;
+    bool definition_global_exists = false;
+    const char *but_this_global_exists = "";
+
+    /* Is this a script? */
+    for(size_t s = 0; s < script_globals->script_count; s++) {
+        const RIAT_Script *script_maybe = &script_globals->scripts[s];
+        if(strcmp(function_name, script_maybe->name) == 0) {
+            max_arguments = 0;
+            script = script_maybe;
+            goto iterate_elements;
+        }
+    }
+
+    /* Is it a definition */
+    definition = RIAT_builtin_definition_search(function_name);
+    if(definition != NULL) {
+        switch(definition->type) {
+            case RIAT_BUILTIN_DEFINITION_TYPE_FUNCTION:
+                max_arguments = definition->parameter_count;
+                goto iterate_elements;
+
+            case RIAT_BUILTIN_DEFINITION_TYPE_GLOBAL:
+                definition_global_exists = true;
+                break;
+
+            default:
+                UNREACHABLE();
+        }
+    }
+
+    /* Error handling */
+    {
+        /* Is this a global? */
+        for(size_t g = 0; g < script_globals->global_count; g++) {
+            const RIAT_Global *global = &script_globals->globals[g];
+            if(strcmp(function_name, global->name) == 0) {
+                local_global_exists = true;
+                break;
+            }
+        }
+
+        /* Add help for the user */
+        if(local_global_exists) {
+            but_this_global_exists = " (a local global by this name exists, but this was called like a function)";
+        }
+        else if(definition_global_exists) {
+            but_this_global_exists = " (an engine global by this name exists, but this was called like a function)";
+        }
+        snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "no such function or script '%s' exists%s", function_name, but_this_global_exists);
+        instance->last_compile_error.syntax_error_line = function_name_node->line;
+        instance->last_compile_error.syntax_error_column = function_name_node->column;
+        instance->last_compile_error.syntax_error_file = function_name_node->file;
+        instance->last_compile_error.result_int = RIAT_COMPILE_ALLOCATION_ERROR;
+        return RIAT_COMPILE_ALLOCATION_ERROR;
+    }
+
+    /* Now let's keep going */
+    iterate_elements:
+    for(size_t element = function_name_node->next_node, argument_index = 0; element != NEXT_NODE_NULL; argument_index++) {
+        RIAT_ScriptNode *element_node = &nodes->nodes[element];
+        RIAT_ValueType this_element_preferred_type = preferred_type;
+
+        /* Punch it! */
+        RIAT_CompileResult result = resolve_type_of_element(instance, nodes, element, this_element_preferred_type, script_globals);
+        if(result != RIAT_COMPILE_OK) {
+            return result;
+        }
+
+        element = element_node->next_node;
+    }
+
+    return RIAT_COMPILE_OK;
+}
+
 #define COMPILE_RETURN_ERROR(what, line, column, explanation_fmt, ...) \
     if(explanation_fmt) snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), explanation_fmt, __VA_ARGS__); \
     instance->last_compile_error.syntax_error_line = line; \
+    instance->last_compile_error.syntax_error_file = file; \
     instance->last_compile_error.syntax_error_column = column; \
     result = what; \
     goto end;
@@ -56,6 +238,7 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t
     assert(begin_definition != NULL);
 
     size_t node_count = 0;
+    size_t file = instance->files.file_names_count - 1;
 
     /* Figure out how many scripts/globals we have. This saves allocations and verifies that all top-level nodes are scripts or globals. */
     long depth = 0;
@@ -150,6 +333,9 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t
             }
 
             relevant_global->first_node = init_node;
+            relevant_global->line = block_type_token->line;
+            relevant_global->column = block_type_token->column;
+            relevant_global->file = block_type_token->file;
         }
 
         else if(strcmp(block_type_token->token_string, "script") == 0) {
@@ -188,21 +374,43 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t
                 goto end;
             }
 
+            /* Implicitly add a begin block */
+            size_t original_first_node_index = node_array.nodes[root_node].child_node;
+            size_t begin_name = append_node_to_node_array(&node_array, "begin");
+            if(begin_name == APPEND_NODE_ALLOCATION_ERROR) {
+                result = RIAT_COMPILE_ALLOCATION_ERROR;
+                goto end;
+            }
+            node_array.nodes[begin_name].is_primitive = true;
+            node_array.nodes[begin_name].next_node = original_first_node_index;
+            node_array.nodes[root_node].child_node = begin_name;
             relevant_script->first_node = root_node;
+            relevant_script->line = block_type_token->line;
+            relevant_script->column = block_type_token->column;
+            relevant_script->file = block_type_token->file;
         }
-    }
-
-    for(size_t g = 0; g < script_global_list.global_count; g++) {
-        printf("DEBUG: Global #%zu = '%s'\n", g, script_global_list.globals[g].name);
-    }
-
-    for(size_t s = 0; s < script_global_list.script_count; s++) {
-        printf("DEBUG: Script #%zu = '%s'\n", s, script_global_list.scripts[s].name);
     }
 
     printf("DEBUG: %zu global%s, %zu script%s, and %zu node%s\n", script_global_list.global_count, script_global_list.global_count == 1 ? "" : "s", script_global_list.script_count, script_global_list.script_count == 1 ? "" : "s", node_array.nodes_count, node_array.nodes_count == 1 ? "" : "s");
 
-    /* TODO: Resolve types for all nodes */
+    /* Resolve types for all nodes (auto-break if result is not OK) */
+    for(size_t g = 0; g < script_global_list.global_count && result == RIAT_COMPILE_OK; g++) {
+        RIAT_Global *global = &script_global_list.globals[g];
+        printf("DEBUG: Global #%zu = '%s'\n", g, global->name);
+
+        result = resolve_type_of_element(instance, &node_array, global->first_node, global->value_type, &script_global_list);
+    }
+
+    for(size_t s = 0; s < script_global_list.script_count && result == RIAT_COMPILE_OK; s++) {
+        RIAT_Script *script = &script_global_list.scripts[s];
+        printf("DEBUG: Script #%zu = '%s'\n", s, script->name);
+        
+        result = resolve_type_of_element(instance, &node_array, script->first_node, script->return_type, &script_global_list);
+    }
+
+    if(result != RIAT_COMPILE_OK) {
+        goto end;
+    }
 
     /* Merge the nodes */
     size_t old_node_count = instance->nodes.nodes_count;
@@ -258,6 +466,7 @@ static RIAT_CompileResult read_block(
     if(current_token->parenthesis == -1) {
         strncpy(instance->last_compile_error.syntax_error_explanation, "block is empty (unexpected left parenthesis)", sizeof(instance->last_compile_error.syntax_error_explanation) - 1);
         instance->last_compile_error.syntax_error_line = current_token->line;
+        instance->last_compile_error.syntax_error_file = current_token->file;
         instance->last_compile_error.syntax_error_column = current_token->column;
         return RIAT_COMPILE_SYNTAX_ERROR;
     }
@@ -286,10 +495,10 @@ static RIAT_CompileResult read_block(
 
         /* Otherwise, set our next node to it */
         else {
-            nodes->nodes[*root_node].is_primitive = true;
-            nodes->nodes[last_node].child_node = new_node;
+            nodes->nodes[last_node].next_node = new_node;
         }
 
+        last_node = new_node;
         current_token = &tokens[*ti];
     }
 
@@ -332,6 +541,7 @@ static RIAT_CompileResult read_next_element(
     element_node->column = first_token->column;
     element_node->line = first_token->line;
     element_node->file = first_token->file;
+    element_node->is_primitive = (first_token->parenthesis == 0);
     return RIAT_COMPILE_OK;
 }
 
