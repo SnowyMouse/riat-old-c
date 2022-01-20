@@ -30,7 +30,7 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
     *token_count = 0;
     size_t token_capacity = 64;
     *tokens = malloc(sizeof(RIAT_Token) * token_capacity);
-
+ 
     /* Nope lol */
     if(tokens == NULL) {
         instance->last_compile_error.result_int = RIAT_COMPILE_ALLOCATION_ERROR;
