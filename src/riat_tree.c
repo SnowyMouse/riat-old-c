@@ -38,22 +38,55 @@ static RIAT_CompileResult read_next_element(
 
 static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_ScriptNodeArrayContainer *nodes, size_t node, RIAT_ValueType preferred_type, const RIAT_ScriptGlobalContainer *script_globals);
 
-#define RESOLVE_TYPE_OF_ELEMENT_FAIL(...) \
-    instance->last_compile_error.syntax_error_file = n->file; \
-    instance->last_compile_error.syntax_error_line = n->line; \
-    instance->last_compile_error.syntax_error_column = n->column; \
+#define SYNTAX_ERROR_INSTANCE(instance, line, column, file) \
+    instance->last_compile_error.syntax_error_file = file; \
+    instance->last_compile_error.syntax_error_line = line; \
+    instance->last_compile_error.syntax_error_column = column; \
     instance->last_compile_error.result_int = RIAT_COMPILE_SYNTAX_ERROR; \
+
+#define RESOLVE_TYPE_OF_ELEMENT_FAIL(...) \
+    SYNTAX_ERROR_INSTANCE(instance, n->line, n->column, n->file); \
     snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), __VA_ARGS__); \
     return RIAT_COMPILE_SYNTAX_ERROR;
+
+#define CONVERT_TYPE_OR_DIE(preferred_type, actual_type, line, column, file) \
+    if(preferred_type != actual_type) { \
+        if( \
+            (preferred_type == RIAT_VALUE_TYPE_REAL && (actual_type == RIAT_VALUE_TYPE_LONG || actual_type == RIAT_VALUE_TYPE_SHORT)) || \
+            (actual_type == RIAT_VALUE_TYPE_REAL && (preferred_type == RIAT_VALUE_TYPE_LONG || preferred_type == RIAT_VALUE_TYPE_SHORT)) \
+        ) { \
+            actual_type = preferred_type; \
+        } \
+        else { \
+            SYNTAX_ERROR_INSTANCE(instance, line, column, file); \
+            snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "expected a %s, but %s cannot be converted into one\n", RIAT_value_type_to_string(preferred_type), RIAT_value_type_to_string(actual_type)); \
+            return RIAT_COMPILE_SYNTAX_ERROR; \
+        } \
+    }
 
 static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_ScriptNodeArrayContainer *nodes, size_t node, RIAT_ValueType preferred_type, const RIAT_ScriptGlobalContainer *script_globals) {
     RIAT_ScriptNode *n = &nodes->nodes[node];
 
     bool numeric_preferred = preferred_type == RIAT_VALUE_TYPE_REAL || preferred_type == RIAT_VALUE_TYPE_LONG || preferred_type == RIAT_VALUE_TYPE_SHORT;
 
-    /* TODO: HANDLE GLOBALS */
-    
     if(n->is_primitive) {
+        /* If it's a global, try finding it, first! */
+        for(size_t g = 0; g < script_globals->global_count; g++) {
+            RIAT_Global *global = &script_globals->globals[g];
+            if(strcmp(global->name, n->string_data) == 0) {
+                n->is_global = true;
+                CONVERT_TYPE_OR_DIE(preferred_type, global->value_type, n->line, n->column, n->file);
+                return RIAT_COMPILE_OK;
+            }
+        }
+        RIAT_BuiltinDefinition *definition = RIAT_builtin_definition_search(n->string_data);
+        if(definition != NULL) {
+            n->is_global = true;
+            CONVERT_TYPE_OR_DIE(preferred_type, definition->value_type, n->line, n->column, n->file);
+            return RIAT_COMPILE_OK;
+        }
+
+        /* Otherwise, convert the string I guess! */
         switch(preferred_type) {
             case RIAT_VALUE_TYPE_VOID:
                 RESOLVE_TYPE_OF_ELEMENT_FAIL("a void type was expected; got '%s' instead", n->string_data);
@@ -144,6 +177,9 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
     /* Erroring? */
     bool local_global_exists = false;
     bool definition_global_exists = false;
+    bool is_passthrough = false; /* TODO: HANDLE PASSTHROUGH */
+    RIAT_ValueType passthrough_value_type = RIAT_VALUE_TYPE_PASSTHROUGH;
+
     const char *but_this_global_exists = "";
 
     /* Is this a script? */
@@ -162,6 +198,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
         switch(definition->type) {
             case RIAT_BUILTIN_DEFINITION_TYPE_FUNCTION:
                 max_arguments = definition->parameter_count;
+                is_passthrough = definition->value_type == RIAT_VALUE_TYPE_PASSTHROUGH;
                 goto iterate_elements;
 
             case RIAT_BUILTIN_DEFINITION_TYPE_GLOBAL:
@@ -192,11 +229,8 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
             but_this_global_exists = " (an engine global by this name exists, but this was called like a function)";
         }
         snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "no such function or script '%s' exists%s", function_name, but_this_global_exists);
-        instance->last_compile_error.syntax_error_line = function_name_node->line;
-        instance->last_compile_error.syntax_error_column = function_name_node->column;
-        instance->last_compile_error.syntax_error_file = function_name_node->file;
-        instance->last_compile_error.result_int = RIAT_COMPILE_ALLOCATION_ERROR;
-        return RIAT_COMPILE_ALLOCATION_ERROR;
+        SYNTAX_ERROR_INSTANCE(instance, function_name_node->line, function_name_node->column, function_name_node->file);
+        return RIAT_COMPILE_SYNTAX_ERROR;
     }
 
     /* Now let's keep going */
@@ -336,6 +370,8 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t
             relevant_global->line = block_type_token->line;
             relevant_global->column = block_type_token->column;
             relevant_global->file = block_type_token->file;
+
+            ti++;
         }
 
         else if(strcmp(block_type_token->token_string, "script") == 0) {

@@ -33,6 +33,9 @@ typedef struct RIAT_ScriptNode {
     /* If this is false, it's a function call */
     bool is_primitive;
 
+    /* If this is a global */
+    bool is_global;
+
     /* Relevant file */
     size_t file;
 
@@ -42,7 +45,7 @@ typedef struct RIAT_ScriptNode {
     /* Relevant column */
     size_t column;
 
-    /* Used if not primitive or if a primitive number/boolean type */ 
+    /* Used if not primitive or if a primitive number/boolean type (and not a global!) */ 
     union {
         /* Child node (if not primitive) */
         size_t child_node;
@@ -180,5 +183,14 @@ RIAT_ScriptType RIAT_script_type_from_string(const char *type, bool *error);
  * @return      value type
  */
 RIAT_ValueType RIAT_value_type_from_string(const char *type, bool *error);
+
+/**
+ * Convert a value type to its string representation.
+ * 
+ * @param type type
+ * 
+ * @return     string representation of type
+ */
+const char *RIAT_value_type_to_string(RIAT_ValueType type);
 
 #endif
