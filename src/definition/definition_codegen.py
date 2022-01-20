@@ -67,13 +67,11 @@ const RIAT_BuiltinDefinition *RIAT_builtin_definition_search(const char *what) {
     size_t start = 0;
     assert(end > start);
 
-    end--;
-
     /* Binary search */
     while(true) {
         size_t middle = (start + end) / 2;
 
-        RIAT_BuiltinDefinition *object = &definitions[(start + end) / 2];
+        RIAT_BuiltinDefinition *object = &definitions[middle];
         int comparison = strcmp(what, object->name);
         if(comparison == 0) {
             return object;
@@ -85,7 +83,7 @@ const RIAT_BuiltinDefinition *RIAT_builtin_definition_search(const char *what) {
             start = middle + 1;
         }
         else {
-            end = middle - 1;
+            end = middle;
         }
     }
 }'''

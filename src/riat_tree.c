@@ -78,10 +78,23 @@ static const RIAT_ValueType *get_type_of_global(const char *name, const RIAT_Scr
     }
     return NULL;
 }
+static const RIAT_ValueType *get_type_of_function(const char *name, const RIAT_ScriptGlobalContainer *script_globals) {
+    /* If it's a script, try finding it, first! */
+    for(size_t s = 0; s < script_globals->script_count; s++) {
+        RIAT_Script *script = &script_globals->scripts[s];
+        if(strcmp(script->name, name) == 0) {
+            return &script->return_type;
+        }
+    }
+    const RIAT_BuiltinDefinition *definition = RIAT_builtin_definition_search(name);
+    if(definition != NULL && definition->type == RIAT_BUILTIN_DEFINITION_TYPE_FUNCTION) {
+        return &definition->value_type;
+    }
+    return NULL;
+}
 
 static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_ScriptNodeArrayContainer *nodes, size_t node, RIAT_ValueType preferred_type, const RIAT_ScriptGlobalContainer *script_globals) {
     RIAT_ScriptNode *n = &nodes->nodes[node];
-
     bool numeric_preferred = preferred_type == RIAT_VALUE_TYPE_REAL || preferred_type == RIAT_VALUE_TYPE_LONG || preferred_type == RIAT_VALUE_TYPE_SHORT;
 
     if(n->is_primitive) {
@@ -257,8 +270,8 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
 
         size_t argument_index = 0;
 
-        /* Special handling of the set function */
-        if(strcmp(function_name, "set") == 0) {
+        /* Special handling of these functions */
+        if(strcmp(function_name, "set") == 0 || strcmp(function_name, "!=") == 0 || strcmp(function_name, "=") == 0) {
             assert(max_arguments == 2); /* duh */
 
             /* Get all of the parameters */
@@ -275,24 +288,86 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
             }
 
             if(argument_index == 2) {
-                RIAT_ScriptNode *global_name_node = &nodes->nodes[parameter_elements[0]];
-                const char *global_name = global_name_node->string_data;
-                const RIAT_ValueType *global_maybe = get_type_of_global(global_name, script_globals);
-                if(!global_maybe) {
-                    snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "set takes a global, but '%s' was not found", global_name);
-                    SYNTAX_ERROR_INSTANCE(instance, global_name_node->line, global_name_node->column, global_name_node->file);
-                    return RIAT_COMPILE_SYNTAX_ERROR;
+                if(strcmp(function_name, "set") == 0) {
+                    RIAT_ScriptNode *global_name_node = &nodes->nodes[parameter_elements[0]];
+                    if(!global_name_node->is_primitive) {
+                        snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "set takes a global, but a function call was given instead");
+                        SYNTAX_ERROR_INSTANCE(instance, global_name_node->line, global_name_node->column, global_name_node->file);
+                        return RIAT_COMPILE_SYNTAX_ERROR;
+                    }
+
+                    const char *global_name = global_name_node->string_data;
+                    const RIAT_ValueType *global_maybe = get_type_of_global(global_name, script_globals);
+                    if(!global_maybe) {
+                        snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "set takes a global, but '%s' was not found", global_name);
+                        SYNTAX_ERROR_INSTANCE(instance, global_name_node->line, global_name_node->column, global_name_node->file);
+                        return RIAT_COMPILE_SYNTAX_ERROR;
+                    }
+                    n->type = *global_maybe;
+                    global_name_node->type = *global_maybe;
+                    
+                    /* Try it */
+                    RIAT_CompileResult result = resolve_type_of_element(instance, nodes, parameter_elements[1], n->type, script_globals);
+                    if(result != RIAT_COMPILE_OK) {
+                        return result;
+                    }
                 }
-                n->type = *global_maybe;
-                
-                /* Try it */
-                RIAT_CompileResult result = resolve_type_of_element(instance, nodes, parameter_elements[1], n->type, script_globals);
-                if(result != RIAT_COMPILE_OK) {
-                    return result;
+                else if(strcmp(function_name, "=") == 0 || strcmp(function_name, "!=") == 0) {
+                    size_t e0 = parameter_elements[0], e1 = parameter_elements[1];
+                    RIAT_ScriptNode *n0 = &nodes->nodes[e0], *n1 = &nodes->nodes[e1];
+
+                    const RIAT_ValueType *g0 = n0->is_primitive ? get_type_of_global(n0->string_data, script_globals) : NULL;
+                    const RIAT_ValueType *g1 = n1->is_primitive ? get_type_of_global(n1->string_data, script_globals) : NULL;
+
+                    /* If one is a global... */
+                    if(g0 != NULL && g1 == NULL) {
+                        n0->type = *g0;
+                        RIAT_CompileResult result = resolve_type_of_element(instance, nodes, e1, n0->type, script_globals);
+                        if(result != RIAT_COMPILE_OK) {
+                            return result;
+                        }
+                    }
+
+                    else if(g1 != NULL && g0 == NULL) {
+                        n1->type = *g1;
+                        RIAT_CompileResult result = resolve_type_of_element(instance, nodes, e0, n1->type, script_globals);
+                        if(result != RIAT_COMPILE_OK) {
+                            return result;
+                        }
+                    }
+
+                    /* If they are both not globals, try to see if one is a block? Otherwise, test them as reals. */
+                    else if(g0 == NULL && g1 == NULL) {
+                        RIAT_ValueType test_type = RIAT_VALUE_TYPE_REAL;
+
+                        if(!n0->is_primitive) {
+                            const RIAT_ValueType *t = get_type_of_function(nodes->nodes[n0->child_node].string_data, script_globals);
+                            if(t != NULL) {
+                                test_type = *t;
+                            }
+                        }
+                        else if(!n1->is_primitive) {
+                            const RIAT_ValueType *t = get_type_of_function(nodes->nodes[n1->child_node].string_data, script_globals);
+                            if(t != NULL) {
+                                test_type = *t;
+                            }
+                        }
+
+                        RIAT_CompileResult result;
+                        result = resolve_type_of_element(instance, nodes, e0, test_type, script_globals);
+                        if(result != RIAT_COMPILE_OK) {
+                            return result;
+                        }
+                        result = resolve_type_of_element(instance, nodes, e1, test_type, script_globals);
+                        if(result != RIAT_COMPILE_OK) {
+                            return result;
+                        }
+                    }
                 }
             }
         }
 
+        /* Everything else... */
         else {
             for(size_t element = function_name_node->next_node; element != NEXT_NODE_NULL; argument_index++) {
                 RIAT_ScriptNode *element_node = &nodes->nodes[element];
@@ -543,20 +618,18 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t
         }
     }
 
+    #ifndef NDEBUG
     printf("DEBUG: %zu global%s, %zu script%s, and %zu node%s\n", script_global_list.global_count, script_global_list.global_count == 1 ? "" : "s", script_global_list.script_count, script_global_list.script_count == 1 ? "" : "s", node_array.nodes_count, node_array.nodes_count == 1 ? "" : "s");
+    #endif
 
     /* Resolve types for all nodes (auto-break if result is not OK) */
     for(size_t g = 0; g < script_global_list.global_count && result == RIAT_COMPILE_OK; g++) {
         RIAT_Global *global = &script_global_list.globals[g];
-        printf("DEBUG: Global #%zu = '%s'\n", g, global->name);
-
         result = resolve_type_of_element(instance, &node_array, global->first_node, global->value_type, &script_global_list);
     }
 
     for(size_t s = 0; s < script_global_list.script_count && result == RIAT_COMPILE_OK; s++) {
         RIAT_Script *script = &script_global_list.scripts[s];
-        printf("DEBUG: Script #%zu = '%s'\n", s, script->name);
-        
         result = resolve_type_of_element(instance, &node_array, script->first_node, script->return_type, &script_global_list);
     }
 
