@@ -11,6 +11,7 @@ find_package(Python3 REQUIRED)
 
 add_library(riat
     src/riat.c
+    src/definition/definition_array.h
     src/definition/definition.c
     src/riat_token.c
     src/riat_tree.c
@@ -18,8 +19,8 @@ add_library(riat
 )
 set_property(TARGET riat PROPERTY C_STANDARD 11)
 
-add_custom_command (OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/src/definition/definition.c"
-    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/src/definition/definition_codegen.py" "${CMAKE_CURRENT_SOURCE_DIR}/src/definition/definition.json" "${CMAKE_CURRENT_SOURCE_DIR}/src/definition/definition.c"
+add_custom_command (OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/src/definition/definition_array.h"
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/src/definition/definition_codegen.py" "${CMAKE_CURRENT_SOURCE_DIR}/src/definition/definition.json" "${CMAKE_CURRENT_SOURCE_DIR}/src/definition/definition_array.h"
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/definition/definition_codegen.py" "${CMAKE_CURRENT_SOURCE_DIR}/src/definition/definition.json"
 )
 
