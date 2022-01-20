@@ -437,7 +437,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
     return RIAT_COMPILE_OK;
 }
 
-#define COMPILE_RETURN_ERROR(what, line, column, explanation_fmt, ...) \
+#define COMPILE_RETURN_ERROR(what, file, line, column, explanation_fmt, ...) \
     if(explanation_fmt) snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), explanation_fmt, __VA_ARGS__); \
     instance->last_compile_error.syntax_error_line = line; \
     instance->last_compile_error.syntax_error_file = file; \
@@ -445,8 +445,11 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
     result = what; \
     goto end;
 
-RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t token_count) {
+RIAT_CompileResult RIAT_tree(RIAT_Instance *instance) {
     RIAT_CompileResult result = RIAT_COMPILE_OK;
+
+    RIAT_Token *tokens = instance->tokens.tokens;
+    size_t token_count = instance->tokens.token_count;
 
     RIAT_ScriptGlobalContainer script_global_list = {};
     size_t script_process_count = 0;
@@ -458,7 +461,6 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t
     assert(begin_definition != NULL);
 
     size_t node_count = 0;
-    size_t file = instance->files.file_names_count - 1;
 
     /* Figure out how many scripts/globals we have. This saves allocations and verifies that all top-level nodes are scripts or globals. */
     long depth = 0;
@@ -471,7 +473,7 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t
 
             /* Is this wrong? */
             if(delta != 1) {
-                COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, token->line, token->column, "expected left parenthesis, got '%s'", token->token_string);
+                COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, token->file, token->line, token->column, "expected left parenthesis, got '%s'", token->token_string);
             }
 
             /* If delta is 1, then ti + 1 should be valid since tokenizing checked if all left parenthesis had a matching right parenthesis. */
@@ -486,7 +488,7 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t
                 script_global_list.script_count++;
             }
             else {
-                COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, token_next->line, token_next->column, "expected 'global' or 'script', got %s", token_next->token_string);
+                COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, token->file, token_next->line, token_next->column, "expected 'global' or 'script', got %s", token_next->token_string);
             }
 
             /* This should not have anything related to parenthesis here */
@@ -502,12 +504,12 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t
     /* Allocate that many now */
     if(script_global_list.script_count > 0) {
         if((script_global_list.scripts = calloc(sizeof(*script_global_list.scripts), script_global_list.script_count)) == NULL) {
-            COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR, 0, 0, NULL, NULL);
+            COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR, 0, 0, 0, NULL, NULL);
         }
     }
     if(script_global_list.global_count > 0) {
         if((script_global_list.globals = calloc(sizeof(*script_global_list.globals), script_global_list.global_count)) == NULL) {
-            COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR, 0, 0, NULL, NULL);
+            COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR, 0, 0, 0, NULL, NULL);
         }
     }
 
@@ -536,13 +538,13 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t
             RIAT_Token *global_type_token = &tokens[ti++];
             relevant_global->value_type = RIAT_value_type_from_string(global_type_token->token_string, &error);
             if(global_type_token->parenthesis != 0 || error) {
-                COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, global_type_token->line, global_type_token->column, "expected global type, got '%s'", global_type_token->token_string);
+                COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, global_type_token->file, global_type_token->line, global_type_token->column, "expected global type, got '%s'", global_type_token->token_string);
             }
 
             /* And the name */
             RIAT_Token *global_name_token = &tokens[ti++];
             if(global_name_token->parenthesis != 0) {
-                COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, global_name_token->line, global_name_token->column, "expected global name, got '%s'", global_name_token->token_string);
+                COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, global_type_token->file, global_name_token->line, global_name_token->column, "expected global name, got '%s'", global_name_token->token_string);
             }
             strncpy(relevant_global->name, global_name_token->token_string, sizeof(relevant_global->name) - 1);
 
@@ -571,7 +573,7 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t
             RIAT_Token *script_type_token = &tokens[ti++];
             relevant_script->script_type = RIAT_script_type_from_string(script_type_token->token_string, &error);
             if(script_type_token->parenthesis != 0 || error) {
-                COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script_type_token->line, script_type_token->column, "expected script type, got '%s'", script_type_token->token_string);
+                COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script_type_token->file, script_type_token->line, script_type_token->column, "expected script type, got '%s'", script_type_token->token_string);
             }
 
             /* If it's a static script, a type is expected */
@@ -579,7 +581,7 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t
                 RIAT_Token *script_type_token = &tokens[ti++];
                 relevant_script->return_type = RIAT_value_type_from_string(script_type_token->token_string, &error);
                 if(script_type_token->parenthesis != 0 || error) {
-                    COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script_type_token->line, script_type_token->column, "expected script type, got '%s'", script_type_token->token_string);
+                    COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script_type_token->file, script_type_token->line, script_type_token->column, "expected script type, got '%s'", script_type_token->token_string);
                 }
             }
 
@@ -591,7 +593,7 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t
             /* And the name */
             RIAT_Token *script_name_token = &tokens[ti++];
             if(script_name_token->parenthesis != 0) {
-                COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script_name_token->line, script_name_token->column, "expected script name, got '%s'", script_name_token->token_string);
+                COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script_type_token->file, script_name_token->line, script_name_token->column, "expected script name, got '%s'", script_name_token->token_string);
             }
             strncpy(relevant_script->name, script_name_token->token_string, sizeof(relevant_script->name) - 1);
 
@@ -668,7 +670,6 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t
     free(script_global_list.scripts);
     free(script_global_list.globals);
     RIAT_clear_node_array_container(&node_array);
-    RIAT_token_free_array(tokens, token_count);
     return result;
 }
 
@@ -684,8 +685,17 @@ static RIAT_CompileResult read_block(
     /* Do some checks on the first token */
     RIAT_Token *current_token = &tokens[*ti];
 
-    /* This should NOT be a left parenthesis unless it's the first thing in a script*/
-    assert(is_script_block || current_token->parenthesis != 1);
+    /* First, is this a cond block? If so... this is going to be interesting */
+    bool is_cond = !is_script_block && current_token->parenthesis == 0 && strcmp(current_token->token_string, "cond") == 0;
+
+    /* Also, this should NOT be a left parenthesis unless it's the first thing in a script */
+    if(!is_script_block && current_token->parenthesis != 1) {
+        strncpy(instance->last_compile_error.syntax_error_explanation, "block starts with an expression (expected function name)", sizeof(instance->last_compile_error.syntax_error_explanation) - 1);
+        instance->last_compile_error.syntax_error_line = current_token->line;
+        instance->last_compile_error.syntax_error_file = current_token->file;
+        instance->last_compile_error.syntax_error_column = current_token->column;
+        return RIAT_COMPILE_SYNTAX_ERROR;
+    }
 
     /* Also make sure it isn't empty */
     if(current_token->parenthesis == -1) {

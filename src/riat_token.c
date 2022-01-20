@@ -24,7 +24,7 @@ static const char *find_next_token(const char *script_source_data, size_t source
 RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_source_data, size_t script_source_length, const char *file_name, RIAT_Token **tokens, size_t *token_count) {
     const char *tokenizer_data = script_source_data;
     size_t tokenizer_length = script_source_length;
-    size_t line = 1, column = 1, file = instance->files.file_names_count - 1;
+    size_t line = 1, column = 1, file = instance->files.file_names_count;
 
     /* Allocate tokens here */
     *token_count = 0;

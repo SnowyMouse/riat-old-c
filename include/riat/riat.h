@@ -120,7 +120,7 @@ typedef enum RIAT_CompileResult {
 } RIAT_CompileResult;
 
 /**
- * Compile the script
+ * Load the script source data
  * 
  * @param instance             instance to compile the script with
  * @param script_source_data   source data to compile
@@ -129,7 +129,16 @@ typedef enum RIAT_CompileResult {
  * 
  * @return                     result
  */
-RIAT_CompileResult RIAT_instance_compile_script(RIAT_Instance *instance, const char *script_source_data, size_t script_source_length, const char *file_name);
+RIAT_CompileResult RIAT_instance_load_script(RIAT_Instance *instance, const char *script_source_data, size_t script_source_length, const char *file_name);
+
+/**
+ * Compile the loaded script(s)
+ * 
+ * @param instance             instance to compile the script with
+ * 
+ * @return                     result
+ */
+RIAT_CompileResult RIAT_instance_compile_scripts(RIAT_Instance *instance);
 
 /**
  * Get the last compile error
@@ -139,7 +148,7 @@ RIAT_CompileResult RIAT_instance_compile_script(RIAT_Instance *instance, const c
  * @param column    set to the column where the error occurred (if applicable)
  * @param file      set to the file where the error occurred (if applicable)
  */
-const char *RIAT_instance_get_last_compile_error(const RIAT_Instance *instance, size_t *line, size_t *column, size_t *file);
+const char *RIAT_instance_get_last_compile_error(const RIAT_Instance *instance, size_t *line, size_t *column, const char **file);
 
 #ifdef __cplusplus
 }

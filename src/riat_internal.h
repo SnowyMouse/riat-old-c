@@ -76,12 +76,21 @@ typedef struct RIAT_ScriptNodeArrayContainer {
     size_t nodes_capacity;
 } RIAT_ScriptNodeArrayContainer;
 
+typedef struct RIAT_Token {
+    char *token_string;
+    size_t line;
+    size_t column;
+    size_t file;
+
+    /* Left = +1. Right = -1. None = 0 */
+    char parenthesis;
+} RIAT_Token;
+
 typedef struct RIAT_Instance {
     /* Compiled files */
     struct {
-        const char *file_names;
+        char **file_names;
         size_t file_names_count;
-        size_t file_names_capacity;
     } files;
 
     /* Last compile error */
@@ -92,21 +101,18 @@ typedef struct RIAT_Instance {
         size_t syntax_error_line;
         size_t syntax_error_column;
         size_t syntax_error_file;
+        char syntax_error_file_name[512];
     } last_compile_error;
+
+    /* All current tokens */
+    struct {
+        RIAT_Token *tokens;
+        size_t token_count;
+    } tokens;
 
     /* All current nodes */
     RIAT_ScriptNodeArrayContainer nodes;
 } RIAT_Instance;
-
-typedef struct RIAT_Token {
-    char *token_string;
-    size_t line;
-    size_t column;
-    size_t file;
-
-    /* Left = +1. Right = -1. None = 0 */
-    char parenthesis;
-} RIAT_Token;
 
 /**
  * Free the token array
@@ -132,10 +138,8 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
  * Create a tree from the tokens
  * 
  * @param instance    instance context this is applicable to
- * @param tokens      pointer to the token array (success or failure, this will be automatically freed)
- * @param token_count number of tokens
  */
-RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t token_count);
+RIAT_CompileResult RIAT_tree(RIAT_Instance *instance);
 
 typedef struct RIAT_Global {
     char name[32];
