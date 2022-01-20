@@ -9053,11 +9053,10 @@
             "type": "void"
         },
         {
-            "name": "sv_map_reset",
+            "name": "sv_map_restart",
             "description": "<Server Only> Restart the current game",
             "engines": {
-                "gbx-custom": null,
-                "gbx-retail": null
+                "gbx-demo": null
             },
             "type": "void"
         },
