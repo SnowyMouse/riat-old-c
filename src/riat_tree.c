@@ -629,10 +629,6 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance) {
         }
     }
 
-    #ifndef NDEBUG
-    printf("DEBUG: %zu global%s, %zu script%s, and %zu node%s\n", script_global_list.global_count, script_global_list.global_count == 1 ? "" : "s", script_global_list.script_count, script_global_list.script_count == 1 ? "" : "s", node_array.nodes_count, node_array.nodes_count == 1 ? "" : "s");
-    #endif
-
     /* Resolve types for all nodes (auto-break if result is not OK) */
     for(size_t g = 0; g < script_global_list.global_count && result == RIAT_COMPILE_OK; g++) {
         RIAT_Global *global = &script_global_list.globals[g];
@@ -647,6 +643,15 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance) {
     if(result != RIAT_COMPILE_OK) {
         goto end;
     }
+
+    #ifndef NDEBUG
+    printf("DEBUG: Compiled %zu global%s and %zu script%s into %zu node%s\n", script_global_list.global_count, script_global_list.global_count == 1 ? "" : "s", script_global_list.script_count, script_global_list.script_count == 1 ? "" : "s", node_array.nodes_count, node_array.nodes_count == 1 ? "" : "s");
+    
+    /* Nothing should be unparsed */
+    for(size_t n = 0; n < node_array.nodes_count; n++) {
+        assert(node_array.nodes[n].type != RIAT_VALUE_TYPE_UNPARSED);
+    }
+    #endif
 
     /* Merge the nodes */
     size_t old_node_count = instance->nodes.nodes_count;
