@@ -89,6 +89,7 @@ static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_
         if(global_maybe) {
             n->type = *global_maybe;
             CONVERT_TYPE_OR_DIE(preferred_type, n->type, n->line, n->column, n->file);
+            return RIAT_COMPILE_OK;
         }
 
         /* Otherwise, convert the string I guess! */
@@ -98,14 +99,14 @@ static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_
             case RIAT_VALUE_TYPE_UNPARSED:
                 abort();
             case RIAT_VALUE_TYPE_BOOLEAN:
-                if(strcmp(n->string_data, "true") == 0 || strcmp(n->string_data, "1") == 0) {
+                if(strcmp(n->string_data, "true") == 0 || strcmp(n->string_data, "on") == 0 || strcmp(n->string_data, "1") == 0) {
                     n->bool_int = 1;
                 }
-                else if(strcmp(n->string_data, "false") == 0 || strcmp(n->string_data, "0") == 0) {
+                else if(strcmp(n->string_data, "false") == 0 || strcmp(n->string_data, "off") == 0 || strcmp(n->string_data, "0") == 0) {
                     n->bool_int = 0;
                 }
                 else {
-                    RESOLVE_TYPE_OF_ELEMENT_FAIL("a boolean type (i.e. 'false'/'true'/'0'/'1') was expected; got '%s' instead", n->string_data);
+                    RESOLVE_TYPE_OF_ELEMENT_FAIL("a boolean type (i.e. 'false'/'true'/'0'/'1'/'off'/'on') was expected; got '%s' instead", n->string_data);
                 }
                 free(n->string_data);
                 n->string_data = NULL;
@@ -505,6 +506,11 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t
                 if(script_type_token->parenthesis != 0 || error) {
                     COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script_type_token->line, script_type_token->column, "expected script type, got '%s'", script_type_token->token_string);
                 }
+            }
+
+            /* Otherwise, void */
+            else {
+                 relevant_script->return_type = RIAT_VALUE_TYPE_VOID;
             }
 
             /* And the name */

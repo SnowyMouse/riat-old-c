@@ -430,6 +430,7 @@
                 },
                 {
                     "optional": true,
+                    "many": true,
                     "type": "short"
                 }
             ],
