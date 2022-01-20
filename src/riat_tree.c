@@ -52,8 +52,16 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
 #define CONVERT_TYPE_OR_DIE(preferred_type, actual_type, line, column, file) \
     if(preferred_type != actual_type) { \
         if( \
+            /* Converting between real and int is OK */ \
             (preferred_type == RIAT_VALUE_TYPE_REAL && (actual_type == RIAT_VALUE_TYPE_LONG || actual_type == RIAT_VALUE_TYPE_SHORT)) || \
-            (actual_type == RIAT_VALUE_TYPE_REAL && (preferred_type == RIAT_VALUE_TYPE_LONG || preferred_type == RIAT_VALUE_TYPE_SHORT)) \
+            (actual_type == RIAT_VALUE_TYPE_REAL && (preferred_type == RIAT_VALUE_TYPE_LONG || preferred_type == RIAT_VALUE_TYPE_SHORT)) || \
+            \
+            /* For whatever reason, demoting an int is OK even though it can possibly overflow/underflow, but promoting one is not...? */ \
+            (preferred_type == RIAT_VALUE_TYPE_SHORT && actual_type == RIAT_VALUE_TYPE_LONG) || \
+            (preferred_type == RIAT_VALUE_TYPE_BOOLEAN && (actual_type == RIAT_VALUE_TYPE_LONG || actual_type == RIAT_VALUE_TYPE_SHORT)) || \
+            \
+            /* Converting from an object to something else is OK */ \
+            ((preferred_type == RIAT_VALUE_TYPE_OBJECT || preferred_type == RIAT_VALUE_TYPE_OBJECT_LIST) && (actual_type == RIAT_VALUE_TYPE_UNIT || actual_type == RIAT_VALUE_TYPE_WEAPON || actual_type == RIAT_VALUE_TYPE_SCENERY || actual_type == RIAT_VALUE_TYPE_VEHICLE || actual_type == RIAT_VALUE_TYPE_DEVICE)) \
         ) \
         { \
             actual_type = preferred_type; \
