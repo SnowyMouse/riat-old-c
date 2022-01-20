@@ -117,7 +117,7 @@
             "description": "set the value of a global variable.",
             "parameters": [
                 {
-                    "type": "string"
+                    "type": "passthrough"
                 },
                 {
                     "type": "passthrough"

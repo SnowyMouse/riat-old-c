@@ -14,6 +14,7 @@ typedef enum RIAT_BuiltinDefinitionType {
 typedef struct RIAT_BuiltinFunctionParameter {
     RIAT_ValueType type;
     bool optional;
+    bool many;
     bool passthrough_last;
 } RIAT_BuiltinFunctionParameter;
 
@@ -41,6 +42,6 @@ enum RIAT_BuiltinDefinitionIndexError {
     RIAT_BUILTIN_DEFINITION_INDEX_UNKNOWN = 65534
 };
 
-RIAT_BuiltinDefinition *RIAT_builtin_definition_search(const char *what);
+const RIAT_BuiltinDefinition *RIAT_builtin_definition_search(const char *what);
 
 #endif

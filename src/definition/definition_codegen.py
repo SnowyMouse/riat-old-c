@@ -32,9 +32,10 @@ for n in everything:
     def format_parameters(w):
         r = ""
         for p in w:
-            r = r + "{{.type={type},.optional={optional},.passthrough_last={passthrough_last}}},".format(
+            r = r + "{{.type={type},.optional={optional},.many={many},.passthrough_last={passthrough_last}}},".format(
                 type=format_value_type(p["type"]),
                 optional="true" if "optional" in p and p["optional"] else "false",
+                many="true" if "many" in p and p["many"] else "false",
                 passthrough_last="true" if "passthrough_last" in p and p["passthrough_last"] else "false"
             )
         return r
@@ -58,10 +59,10 @@ output = '''// This file was auto-generated and should not be edited directly.
 #include <string.h>
 #include <assert.h>
 
-static RIAT_BuiltinDefinition definitions[] = {
+static const RIAT_BuiltinDefinition definitions[] = {
 ''' + output_defs + '''};
 
-RIAT_BuiltinDefinition *RIAT_builtin_definition_search(const char *what) {
+const RIAT_BuiltinDefinition *RIAT_builtin_definition_search(const char *what) {
     size_t end = sizeof(definitions) / sizeof(definitions[0]);
     size_t start = 0;
     assert(end > start);

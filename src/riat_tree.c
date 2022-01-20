@@ -59,7 +59,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
         } \
         else { \
             SYNTAX_ERROR_INSTANCE(instance, line, column, file); \
-            snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "expected a %s, but %s cannot be converted into one\n", RIAT_value_type_to_string(preferred_type), RIAT_value_type_to_string(actual_type)); \
+            snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "expected a %s, but %s cannot be converted into one", RIAT_value_type_to_string(preferred_type), RIAT_value_type_to_string(actual_type)); \
             return RIAT_COMPILE_SYNTAX_ERROR; \
         } \
     }
@@ -79,10 +79,11 @@ static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_
                 return RIAT_COMPILE_OK;
             }
         }
-        RIAT_BuiltinDefinition *definition = RIAT_builtin_definition_search(n->string_data);
+        const RIAT_BuiltinDefinition *definition = RIAT_builtin_definition_search(n->string_data);
         if(definition != NULL) {
             n->is_global = true;
-            CONVERT_TYPE_OR_DIE(preferred_type, definition->value_type, n->line, n->column, n->file);
+            n->type = definition->value_type;
+            CONVERT_TYPE_OR_DIE(preferred_type, n->type, n->line, n->column, n->file);
             return RIAT_COMPILE_OK;
         }
 
@@ -171,14 +172,12 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
     const char *function_name = function_name_node->string_data;
 
     const RIAT_Script *script = NULL;
-    RIAT_BuiltinDefinition *definition = NULL;
+    const RIAT_BuiltinDefinition *definition = NULL;
     size_t max_arguments = 0;
 
     /* Erroring? */
     bool local_global_exists = false;
     bool definition_global_exists = false;
-    bool is_passthrough = false; /* TODO: HANDLE PASSTHROUGH */
-    RIAT_ValueType passthrough_value_type = RIAT_VALUE_TYPE_PASSTHROUGH;
 
     const char *but_this_global_exists = "";
 
@@ -188,6 +187,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
         if(strcmp(function_name, script_maybe->name) == 0) {
             max_arguments = 0;
             script = script_maybe;
+            n->type = script->return_type;
             goto iterate_elements;
         }
     }
@@ -198,7 +198,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
         switch(definition->type) {
             case RIAT_BUILTIN_DEFINITION_TYPE_FUNCTION:
                 max_arguments = definition->parameter_count;
-                is_passthrough = definition->value_type == RIAT_VALUE_TYPE_PASSTHROUGH;
+                n->type = definition->value_type;
                 goto iterate_elements;
 
             case RIAT_BUILTIN_DEFINITION_TYPE_GLOBAL:
@@ -235,17 +235,83 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
 
     /* Now let's keep going */
     iterate_elements:
-    for(size_t element = function_name_node->next_node, argument_index = 0; element != NEXT_NODE_NULL; argument_index++) {
-        RIAT_ScriptNode *element_node = &nodes->nodes[element];
-        RIAT_ValueType this_element_preferred_type = preferred_type;
 
-        /* Punch it! */
-        RIAT_CompileResult result = resolve_type_of_element(instance, nodes, element, this_element_preferred_type, script_globals);
-        if(result != RIAT_COMPILE_OK) {
-            return result;
+    /* Are there no arguments yet some were given? */
+    if(max_arguments == 0) {
+        if(function_name_node->next_node != NEXT_NODE_NULL) {
+            RIAT_ScriptNode *element_node = &nodes->nodes[function_name_node->next_node];
+            snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "'%s' takes no parameters but a parameter was given", function_name);
+            SYNTAX_ERROR_INSTANCE(instance, element_node->line, element_node->column, element_node->file);
+            return RIAT_COMPILE_SYNTAX_ERROR;
+        }
+    }
+
+    /* Otherwise, let's parse them */
+    else {
+        size_t argument_index = 0;
+
+        for(size_t element = function_name_node->next_node; element != NEXT_NODE_NULL; argument_index++) {
+            RIAT_ScriptNode *element_node = &nodes->nodes[element];
+            const RIAT_BuiltinFunctionParameter *parameter;
+
+            /* Did we exceed the max number of arguments? If so, check if the last argument has 'many' set. */
+            if(argument_index >= max_arguments) {
+                parameter = &definition->parameters[max_arguments - 1];
+                if(!parameter->many) {
+                    snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "'%s' takes %zu parameter%s, but more were given", function_name, max_arguments, max_arguments == 1 ? "" : "s");
+                    SYNTAX_ERROR_INSTANCE(instance, element_node->line, element_node->column, element_node->file);
+                    return RIAT_COMPILE_SYNTAX_ERROR;
+                }
+            }
+
+            /* No, OK! */
+            else {
+                parameter = &definition->parameters[argument_index];
+            }
+
+            RIAT_ValueType this_element_preferred_type = parameter->type;
+
+            /* If the last element is passthrough, there is some special behavior here */
+            if(parameter->type == RIAT_VALUE_TYPE_PASSTHROUGH) {
+                /* If it's not the last type and we only passthrough the last, then it's void */
+                if(parameter->passthrough_last && element_node->next_node != NEXT_NODE_NULL) {
+                    this_element_preferred_type = RIAT_VALUE_TYPE_VOID;
+                }
+
+                /* Otherwise it's the preferred type */
+                else {
+                    this_element_preferred_type = preferred_type;
+                    n->type = this_element_preferred_type;
+                }
+            }
+
+            /* Punch it! */
+            RIAT_CompileResult result = resolve_type_of_element(instance, nodes, element, this_element_preferred_type, script_globals);
+            if(result != RIAT_COMPILE_OK) {
+                return result;
+            }
+
+            element = element_node->next_node;
         }
 
-        element = element_node->next_node;
+        /* Not enough arguments? */
+        if(argument_index < max_arguments) {
+            if(!definition->parameters[argument_index].optional) {
+                snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "'%s' takes %zu parameter%s, but only %zu were given", function_name, max_arguments, max_arguments == 1 ? "" : "s", argument_index);
+                SYNTAX_ERROR_INSTANCE(instance, function_name_node->line, function_name_node->column, function_name_node->file);
+                return RIAT_COMPILE_SYNTAX_ERROR;
+            }
+        }
+    }
+
+    /* If it's void, we don't need to care about the type */
+    if(preferred_type == RIAT_VALUE_TYPE_VOID) {
+        n->type = RIAT_VALUE_TYPE_VOID;
+    }
+
+    /* Otherwise, try converting it */
+    else {
+        CONVERT_TYPE_OR_DIE(preferred_type, n->type, n->line, n->column, n->file);
     }
 
     return RIAT_COMPILE_OK;
@@ -267,7 +333,7 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance, RIAT_Token *tokens, size_t
     size_t global_process_count = 0;
 
     RIAT_ScriptNodeArrayContainer node_array = {};
-    RIAT_BuiltinDefinition *begin_definition = RIAT_builtin_definition_search("begin");
+    const RIAT_BuiltinDefinition *begin_definition = RIAT_builtin_definition_search("begin");
 
     assert(begin_definition != NULL);
 
