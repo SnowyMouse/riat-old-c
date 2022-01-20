@@ -9,9 +9,7 @@ int main(int argc, const char **argv) {
 
     try {
         RIAT::Instance instance;
-
         for(int i = 1; i < argc; i++) {
-
             std::FILE *f = std::fopen(argv[i], "rb");
             if(!f) {
                 std::printf("Can't open %s\n", argv[i]);

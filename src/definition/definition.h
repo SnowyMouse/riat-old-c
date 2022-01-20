@@ -7,6 +7,7 @@
 #include "../../include/riat/riat.h"
 
 typedef enum RIAT_BuiltinDefinitionType {
+    RIAT_BUILTIN_DEFINITION_TYPE_ANY,
     RIAT_BUILTIN_DEFINITION_TYPE_FUNCTION,
     RIAT_BUILTIN_DEFINITION_TYPE_GLOBAL
 } RIAT_BuiltinDefinitionType;
@@ -42,6 +43,6 @@ enum RIAT_BuiltinDefinitionIndexError {
     RIAT_BUILTIN_DEFINITION_INDEX_UNKNOWN = 65534
 };
 
-const RIAT_BuiltinDefinition *RIAT_builtin_definition_search(const char *what);
+const RIAT_BuiltinDefinition *RIAT_builtin_definition_search(const char *what, RIAT_CompileTarget target, RIAT_BuiltinDefinitionType type);
 
 #endif

@@ -5,12 +5,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-RIAT_Instance *RIAT_instance_new() {
+RIAT_Instance *RIAT_instance_new(RIAT_CompileTarget compile_target) {
     RIAT_Instance *instance = calloc(sizeof(*instance), 1);
     if(!instance) {
         return NULL;
     }
 
+    instance->compile_target = compile_target;
     return instance;
 }
 

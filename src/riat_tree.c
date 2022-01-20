@@ -73,7 +73,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
         } \
     }
 
-static const RIAT_ValueType *get_type_of_global(const char *name, const RIAT_ScriptGlobalContainer *script_globals) {
+static const RIAT_ValueType *get_type_of_global(const char *name, const RIAT_ScriptGlobalContainer *script_globals, RIAT_CompileTarget target) {
     /* If it's a global, try finding it, first! */
     for(size_t g = 0; g < script_globals->global_count; g++) {
         RIAT_Global *global = &script_globals->globals[g];
@@ -81,13 +81,13 @@ static const RIAT_ValueType *get_type_of_global(const char *name, const RIAT_Scr
             return &global->value_type;
         }
     }
-    const RIAT_BuiltinDefinition *definition = RIAT_builtin_definition_search(name);
-    if(definition != NULL && definition->type == RIAT_BUILTIN_DEFINITION_TYPE_GLOBAL) {
+    const RIAT_BuiltinDefinition *definition = RIAT_builtin_definition_search(name, target, RIAT_BUILTIN_DEFINITION_TYPE_GLOBAL);
+    if(definition != NULL) {
         return &definition->value_type;
     }
     return NULL;
 }
-static const RIAT_ValueType *get_type_of_function(const char *name, const RIAT_ScriptGlobalContainer *script_globals) {
+static const RIAT_ValueType *get_type_of_function(const char *name, const RIAT_ScriptGlobalContainer *script_globals, RIAT_CompileTarget target) {
     /* If it's a script, try finding it, first! */
     for(size_t s = 0; s < script_globals->script_count; s++) {
         RIAT_Script *script = &script_globals->scripts[s];
@@ -95,8 +95,8 @@ static const RIAT_ValueType *get_type_of_function(const char *name, const RIAT_S
             return &script->return_type;
         }
     }
-    const RIAT_BuiltinDefinition *definition = RIAT_builtin_definition_search(name);
-    if(definition != NULL && definition->type == RIAT_BUILTIN_DEFINITION_TYPE_FUNCTION) {
+    const RIAT_BuiltinDefinition *definition = RIAT_builtin_definition_search(name, target, RIAT_BUILTIN_DEFINITION_TYPE_FUNCTION);
+    if(definition != NULL) {
         return &definition->value_type;
     }
     return NULL;
@@ -107,7 +107,7 @@ static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_
     bool numeric_preferred = preferred_type == RIAT_VALUE_TYPE_REAL || preferred_type == RIAT_VALUE_TYPE_LONG || preferred_type == RIAT_VALUE_TYPE_SHORT;
 
     if(n->is_primitive) {
-        const RIAT_ValueType *global_maybe = get_type_of_global(n->string_data, script_globals);
+        const RIAT_ValueType *global_maybe = get_type_of_global(n->string_data, script_globals, instance->compile_target);
         if(global_maybe) {
             n->type = *global_maybe;
             CONVERT_TYPE_OR_DIE(preferred_type, n->type, n->line, n->column, n->file);
@@ -206,8 +206,6 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
     bool local_global_exists = false;
     bool definition_global_exists = false;
 
-    const char *but_this_global_exists = "";
-
     /* Is this a script? */
     for(size_t s = 0; s < script_globals->script_count; s++) {
         const RIAT_Script *script_maybe = &script_globals->scripts[s];
@@ -220,7 +218,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
     }
 
     /* Is it a definition */
-    definition = RIAT_builtin_definition_search(function_name);
+    definition = RIAT_builtin_definition_search(function_name, instance->compile_target, RIAT_BUILTIN_DEFINITION_TYPE_ANY);
     if(definition != NULL) {
         switch(definition->type) {
             case RIAT_BUILTIN_DEFINITION_TYPE_FUNCTION:
@@ -248,14 +246,23 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
             }
         }
 
+        const char *suffix = "";
+
         /* Add help for the user */
         if(local_global_exists) {
-            but_this_global_exists = " (a local global by this name exists, but this was called like a function)";
+            suffix = " (a local global by this name exists, but this was called like a function)";
         }
         else if(definition_global_exists) {
-            but_this_global_exists = " (an engine global by this name exists, but this was called like a function)";
+            suffix = " (an engine global by this name exists, but this was called like a function)";
         }
-        snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "no such function or script '%s' exists%s", function_name, but_this_global_exists);
+        else {
+            const RIAT_BuiltinDefinition *def = RIAT_builtin_definition_search(function_name, RIAT_COMPILE_TARGET_ANY, RIAT_BUILTIN_DEFINITION_TYPE_FUNCTION);
+            if(def != NULL && def->type == RIAT_BUILTIN_DEFINITION_TYPE_FUNCTION) {
+                suffix = " for the target engine (it is defined on another engine however)";
+            }
+        }
+
+        snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "no such function or script '%s' was defined%s", function_name, suffix);
         SYNTAX_ERROR_INSTANCE(instance, function_name_node->line, function_name_node->column, function_name_node->file);
         return RIAT_COMPILE_SYNTAX_ERROR;
     }
@@ -306,9 +313,10 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
                     }
 
                     const char *global_name = global_name_node->string_data;
-                    const RIAT_ValueType *global_maybe = get_type_of_global(global_name, script_globals);
+                    const RIAT_ValueType *global_maybe = get_type_of_global(global_name, script_globals, instance->compile_target);
                     if(!global_maybe) {
-                        snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "set takes a global, but '%s' was not found", global_name);
+                        const char *was_not_found = RIAT_builtin_definition_search(global_name, RIAT_COMPILE_TARGET_ANY, RIAT_BUILTIN_DEFINITION_TYPE_GLOBAL) == NULL ? "was not found" : "is not defined for the target engine (it is defined for another engine however)";
+                        snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "set takes a global, but '%s' %s", global_name, was_not_found);
                         SYNTAX_ERROR_INSTANCE(instance, global_name_node->line, global_name_node->column, global_name_node->file);
                         return RIAT_COMPILE_SYNTAX_ERROR;
                     }
@@ -325,8 +333,8 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
                     size_t e0 = parameter_elements[0], e1 = parameter_elements[1];
                     RIAT_ScriptNode *n0 = &nodes->nodes[e0], *n1 = &nodes->nodes[e1];
 
-                    const RIAT_ValueType *g0 = n0->is_primitive ? get_type_of_global(n0->string_data, script_globals) : NULL;
-                    const RIAT_ValueType *g1 = n1->is_primitive ? get_type_of_global(n1->string_data, script_globals) : NULL;
+                    const RIAT_ValueType *g0 = n0->is_primitive ? get_type_of_global(n0->string_data, script_globals, instance->compile_target) : NULL;
+                    const RIAT_ValueType *g1 = n1->is_primitive ? get_type_of_global(n1->string_data, script_globals, instance->compile_target) : NULL;
 
                     /* If one is a global... */
                     if(g0 != NULL && g1 == NULL) {
@@ -350,13 +358,13 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
                         RIAT_ValueType test_type = RIAT_VALUE_TYPE_REAL;
 
                         if(!n0->is_primitive) {
-                            const RIAT_ValueType *t = get_type_of_function(nodes->nodes[n0->child_node].string_data, script_globals);
+                            const RIAT_ValueType *t = get_type_of_function(nodes->nodes[n0->child_node].string_data, script_globals, instance->compile_target);
                             if(t != NULL) {
                                 test_type = *t;
                             }
                         }
                         else if(!n1->is_primitive) {
-                            const RIAT_ValueType *t = get_type_of_function(nodes->nodes[n1->child_node].string_data, script_globals);
+                            const RIAT_ValueType *t = get_type_of_function(nodes->nodes[n1->child_node].string_data, script_globals, instance->compile_target);
                             if(t != NULL) {
                                 test_type = *t;
                             }
@@ -465,10 +473,6 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance) {
     size_t global_process_count = 0;
 
     RIAT_ScriptNodeArrayContainer node_array = {};
-    const RIAT_BuiltinDefinition *begin_definition = RIAT_builtin_definition_search("begin");
-
-    assert(begin_definition != NULL);
-
     size_t node_count = 0;
 
     /* Figure out how many scripts/globals we have. This saves allocations and verifies that all top-level nodes are scripts or globals. */

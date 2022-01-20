@@ -91,12 +91,23 @@ typedef enum RIAT_ScriptType {
     RIAT_SCRIPT_TYPE_STUB
 } RIAT_ScriptType;
 
+typedef enum RIAT_CompileTarget {
+    RIAT_COMPILE_TARGET_ANY,
+    RIAT_COMPILE_TARGET_XBOX,
+    RIAT_COMPILE_TARGET_GEARBOX_RETAIL,
+    RIAT_COMPILE_TARGET_GEARBOX_DEMO,
+    RIAT_COMPILE_TARGET_GEARBOX_CUSTOM_EDITION,
+    RIAT_COMPILE_TARGET_MCC_CEA
+} RIAT_CompileTarget;
+
 /**
  * Make an instance
  * 
- * @return new instance pointer or NULL on failure
+ * @param  target compile target
+ * 
+ * @return        new instance pointer or NULL on failure
  */
-struct RIAT_Instance *RIAT_instance_new();
+struct RIAT_Instance *RIAT_instance_new(RIAT_CompileTarget target);
 
 /**
  * Clear the instance, freeing all memory associated with it. Passing NULL is a no-op.

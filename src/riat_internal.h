@@ -87,6 +87,9 @@ typedef struct RIAT_Token {
 } RIAT_Token;
 
 typedef struct RIAT_Instance {
+    /* Compile target */
+    RIAT_CompileTarget compile_target;
+
     /* Compiled files */
     struct {
         char **file_names;

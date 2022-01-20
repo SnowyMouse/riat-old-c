@@ -94,11 +94,13 @@ namespace RIAT {
             handle_compile_error(RIAT_instance_compile_scripts(instance.get()));
         }
 
-        Instance() : instance(RIAT_instance_new(), RIAT_instance_delete) {
+        Instance(RIAT_CompileTarget compile_target) : instance(RIAT_instance_new(compile_target), RIAT_instance_delete) {
             if(this->instance.get() == nullptr) {
                 throw AllocationException();
             }
         }
+
+        Instance() : Instance(RIAT_CompileTarget::RIAT_COMPILE_TARGET_ANY) {}
     private:
         std::unique_ptr<RIAT_Instance, void(*)(RIAT_Instance*)> instance;
 
