@@ -68,7 +68,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
         } \
         else { \
             SYNTAX_ERROR_INSTANCE(instance, line, column, file); \
-            snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "expected a %s, but %s cannot be converted into one", RIAT_value_type_to_string(preferred_type), RIAT_value_type_to_string(actual_type)); \
+            snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "expected a %s, but %s cannot be converted into one", riat_value_type_to_string(preferred_type), riat_value_type_to_string(actual_type)); \
             return RIAT_COMPILE_SYNTAX_ERROR; \
         } \
     }
@@ -81,7 +81,7 @@ static const RIAT_ValueType *get_type_of_global(const char *name, const RIAT_Scr
             return &global->value_type;
         }
     }
-    const RIAT_BuiltinDefinition *definition = RIAT_builtin_definition_search(name, target, RIAT_BUILTIN_DEFINITION_TYPE_GLOBAL);
+    const RIAT_BuiltinDefinition *definition = riat_builtin_definition_search(name, target, RIAT_BUILTIN_DEFINITION_TYPE_GLOBAL);
     if(definition != NULL) {
         return &definition->value_type;
     }
@@ -95,7 +95,7 @@ static const RIAT_ValueType *get_type_of_function(const char *name, const RIAT_S
             return &script->return_type;
         }
     }
-    const RIAT_BuiltinDefinition *definition = RIAT_builtin_definition_search(name, target, RIAT_BUILTIN_DEFINITION_TYPE_FUNCTION);
+    const RIAT_BuiltinDefinition *definition = riat_builtin_definition_search(name, target, RIAT_BUILTIN_DEFINITION_TYPE_FUNCTION);
     if(definition != NULL) {
         return &definition->value_type;
     }
@@ -218,7 +218,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
     }
 
     /* Is it a definition */
-    definition = RIAT_builtin_definition_search(function_name, instance->compile_target, RIAT_BUILTIN_DEFINITION_TYPE_ANY);
+    definition = riat_builtin_definition_search(function_name, instance->compile_target, RIAT_BUILTIN_DEFINITION_TYPE_ANY);
     if(definition != NULL) {
         switch(definition->type) {
             case RIAT_BUILTIN_DEFINITION_TYPE_FUNCTION:
@@ -256,7 +256,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
             suffix = " (an engine global by this name exists, but this was called like a function)";
         }
         else {
-            const RIAT_BuiltinDefinition *def = RIAT_builtin_definition_search(function_name, RIAT_COMPILE_TARGET_ANY, RIAT_BUILTIN_DEFINITION_TYPE_FUNCTION);
+            const RIAT_BuiltinDefinition *def = riat_builtin_definition_search(function_name, RIAT_COMPILE_TARGET_ANY, RIAT_BUILTIN_DEFINITION_TYPE_FUNCTION);
             if(def != NULL && def->type == RIAT_BUILTIN_DEFINITION_TYPE_FUNCTION) {
                 suffix = " for the target engine (it is defined on another engine however)";
             }
@@ -315,7 +315,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
                     const char *global_name = global_name_node->string_data;
                     const RIAT_ValueType *global_maybe = get_type_of_global(global_name, script_globals, instance->compile_target);
                     if(!global_maybe) {
-                        const char *was_not_found = RIAT_builtin_definition_search(global_name, RIAT_COMPILE_TARGET_ANY, RIAT_BUILTIN_DEFINITION_TYPE_GLOBAL) == NULL ? "was not found" : "is not defined for the target engine (it is defined for another engine however)";
+                        const char *was_not_found = riat_builtin_definition_search(global_name, RIAT_COMPILE_TARGET_ANY, RIAT_BUILTIN_DEFINITION_TYPE_GLOBAL) == NULL ? "was not found" : "is not defined for the target engine (it is defined for another engine however)";
                         snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "set takes a global, but '%s' %s", global_name, was_not_found);
                         SYNTAX_ERROR_INSTANCE(instance, global_name_node->line, global_name_node->column, global_name_node->file);
                         return RIAT_COMPILE_SYNTAX_ERROR;
@@ -462,7 +462,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
     result = what; \
     goto end;
 
-RIAT_CompileResult RIAT_tree(RIAT_Instance *instance) {
+RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
     RIAT_CompileResult result = RIAT_COMPILE_OK;
 
     RIAT_Token *tokens = instance->tokens.tokens;
@@ -549,7 +549,7 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance) {
 
             /* Get the type */
             RIAT_Token *global_type_token = &tokens[ti++];
-            relevant_global->value_type = RIAT_value_type_from_string(global_type_token->token_string, &error);
+            relevant_global->value_type = riat_value_type_from_string(global_type_token->token_string, &error);
             if(global_type_token->parenthesis != 0 || error) {
                 COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, global_type_token->file, global_type_token->line, global_type_token->column, "expected global type, got '%s'", global_type_token->token_string);
             }
@@ -584,7 +584,7 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance) {
 
             /* Get the type */
             RIAT_Token *script_type_token = &tokens[ti++];
-            relevant_script->script_type = RIAT_script_type_from_string(script_type_token->token_string, &error);
+            relevant_script->script_type = riat_script_type_from_string(script_type_token->token_string, &error);
             if(script_type_token->parenthesis != 0 || error) {
                 COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script_type_token->file, script_type_token->line, script_type_token->column, "expected script type, got '%s'", script_type_token->token_string);
             }
@@ -592,7 +592,7 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance) {
             /* If it's a static script, a type is expected */
             if(relevant_script->script_type == RIAT_SCRIPT_TYPE_STATIC || relevant_script->script_type == RIAT_SCRIPT_TYPE_STUB) {
                 RIAT_Token *script_type_token = &tokens[ti++];
-                relevant_script->return_type = RIAT_value_type_from_string(script_type_token->token_string, &error);
+                relevant_script->return_type = riat_value_type_from_string(script_type_token->token_string, &error);
                 if(script_type_token->parenthesis != 0 || error) {
                     COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script_type_token->file, script_type_token->line, script_type_token->column, "expected script type, got '%s'", script_type_token->token_string);
                 }
@@ -687,7 +687,7 @@ RIAT_CompileResult RIAT_tree(RIAT_Instance *instance) {
     end:
     free(script_global_list.scripts);
     free(script_global_list.globals);
-    RIAT_clear_node_array_container(&node_array);
+    riat_clear_node_array_container(&node_array);
     return result;
 }
 

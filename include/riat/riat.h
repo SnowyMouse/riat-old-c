@@ -107,14 +107,14 @@ typedef enum RIAT_CompileTarget {
  * 
  * @return        new instance pointer or NULL on failure
  */
-struct RIAT_Instance *RIAT_instance_new(RIAT_CompileTarget target);
+struct RIAT_Instance *riat_instance_new(RIAT_CompileTarget target);
 
 /**
  * Clear the instance, freeing all memory associated with it. Passing NULL is a no-op.
  * 
  * @param instance instance to free
  */
-void RIAT_instance_delete(RIAT_Instance *instance);
+void riat_instance_delete(RIAT_Instance *instance);
 
 /**
  * Compile result return values
@@ -140,7 +140,7 @@ typedef enum RIAT_CompileResult {
  * 
  * @return                     result
  */
-RIAT_CompileResult RIAT_instance_load_script(RIAT_Instance *instance, const char *script_source_data, size_t script_source_length, const char *file_name);
+RIAT_CompileResult riat_instance_load_script(RIAT_Instance *instance, const char *script_source_data, size_t script_source_length, const char *file_name);
 
 /**
  * Compile the loaded script(s)
@@ -149,7 +149,7 @@ RIAT_CompileResult RIAT_instance_load_script(RIAT_Instance *instance, const char
  * 
  * @return                     result
  */
-RIAT_CompileResult RIAT_instance_compile_scripts(RIAT_Instance *instance);
+RIAT_CompileResult riat_instance_compile_scripts(RIAT_Instance *instance);
 
 /**
  * Get the last compile error
@@ -159,7 +159,7 @@ RIAT_CompileResult RIAT_instance_compile_scripts(RIAT_Instance *instance);
  * @param column    set to the column where the error occurred (if applicable)
  * @param file      set to the file where the error occurred (if applicable)
  */
-const char *RIAT_instance_get_last_compile_error(const RIAT_Instance *instance, size_t *line, size_t *column, const char **file);
+const char *riat_instance_get_last_compile_error(const RIAT_Instance *instance, size_t *line, size_t *column, const char **file);
 
 #ifdef __cplusplus
 }

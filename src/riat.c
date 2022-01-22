@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-RIAT_Instance *RIAT_instance_new(RIAT_CompileTarget compile_target) {
+RIAT_Instance *riat_instance_new(RIAT_CompileTarget compile_target) {
     RIAT_Instance *instance = calloc(sizeof(*instance), 1);
     if(!instance) {
         return NULL;
@@ -15,7 +15,7 @@ RIAT_Instance *RIAT_instance_new(RIAT_CompileTarget compile_target) {
     return instance;
 }
 
-const char *RIAT_instance_get_last_compile_error(const RIAT_Instance *instance, size_t *line, size_t *column, const char **file) {
+const char *riat_instance_get_last_compile_error(const RIAT_Instance *instance, size_t *line, size_t *column, const char **file) {
     switch(instance->last_compile_error.result_int) {
         case RIAT_COMPILE_OK:
             return NULL;
@@ -33,7 +33,7 @@ const char *RIAT_instance_get_last_compile_error(const RIAT_Instance *instance, 
     instance->last_compile_error.result_int = what; \
     return what;
 
-RIAT_CompileResult RIAT_instance_load_script(RIAT_Instance *instance, const char *script_source_data, size_t script_source_length, const char *file_name) {
+RIAT_CompileResult riat_instance_load_script(RIAT_Instance *instance, const char *script_source_data, size_t script_source_length, const char *file_name) {
     /* Clear the error */
     memset(&instance->last_compile_error, 0, sizeof(instance->last_compile_error));
 
@@ -41,7 +41,7 @@ RIAT_CompileResult RIAT_instance_load_script(RIAT_Instance *instance, const char
     size_t token_count;
 
     /* Tokenize it */
-    RIAT_CompileResult result = RIAT_tokenize(instance, script_source_data, script_source_length, file_name, &tokens, &token_count);
+    RIAT_CompileResult result = riat_tokenize(instance, script_source_data, script_source_length, file_name, &tokens, &token_count);
     if(result != RIAT_COMPILE_OK) {
         strncpy(instance->last_compile_error.syntax_error_file_name, file_name, sizeof(instance->last_compile_error.syntax_error_file_name) - 1);
         COMPILE_RETURN_ERROR(result);
@@ -50,12 +50,12 @@ RIAT_CompileResult RIAT_instance_load_script(RIAT_Instance *instance, const char
     /* If that worked, we can append the file name now */
     char *file_name_copy = strdup(file_name);
     if(file_name_copy == NULL) {
-        RIAT_token_free_array(tokens, token_count);
+        riat_token_free_array(tokens, token_count);
         COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR);
     }
     char **new_file_names_ptr = realloc(instance->files.file_names, sizeof(*new_file_names_ptr) * (instance->files.file_names_count + 1));
     if(new_file_names_ptr == NULL) {
-        RIAT_token_free_array(tokens, token_count);
+        riat_token_free_array(tokens, token_count);
         free(file_name_copy);
         COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR);
     }
@@ -75,7 +75,7 @@ RIAT_CompileResult RIAT_instance_load_script(RIAT_Instance *instance, const char
 
         /* Or don't lol */
         if(new_token_array == NULL) {
-            RIAT_token_free_array(tokens, token_count);
+            riat_token_free_array(tokens, token_count);
             free(file_name_copy);
             COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR);
         }
@@ -93,10 +93,10 @@ RIAT_CompileResult RIAT_instance_load_script(RIAT_Instance *instance, const char
     return RIAT_COMPILE_OK;
 }
 
-RIAT_CompileResult RIAT_instance_compile_scripts(RIAT_Instance *instance) {
+RIAT_CompileResult riat_instance_compile_scripts(RIAT_Instance *instance) {
     /* Clear the error */
     memset(&instance->last_compile_error, 0, sizeof(instance->last_compile_error));
-    RIAT_CompileResult result = RIAT_tree(instance);
+    RIAT_CompileResult result = riat_tree(instance);
     if(result != RIAT_COMPILE_OK) {
         if(result == RIAT_COMPILE_SYNTAX_ERROR) {
             strncpy(instance->last_compile_error.syntax_error_file_name, instance->files.file_names[instance->last_compile_error.syntax_error_file], sizeof(instance->last_compile_error.syntax_error_file_name) - 1);
@@ -105,7 +105,7 @@ RIAT_CompileResult RIAT_instance_compile_scripts(RIAT_Instance *instance) {
     }
 
     /* Free it all */
-    RIAT_token_free_array(instance->tokens.tokens, instance->tokens.token_count);
+    riat_token_free_array(instance->tokens.tokens, instance->tokens.token_count);
     instance->tokens.token_count = 0;
     instance->tokens.tokens = NULL;
 
@@ -115,17 +115,17 @@ RIAT_CompileResult RIAT_instance_compile_scripts(RIAT_Instance *instance) {
 #undef COMPILE_TRY
 #undef COMPILE_RETURN_ERROR
 
-void RIAT_instance_delete(RIAT_Instance *instance) {
+void riat_instance_delete(RIAT_Instance *instance) {
     if(instance == NULL) {
         return;
     }
 
-    RIAT_token_free_array(instance->tokens.tokens, instance->tokens.token_count);
-    RIAT_clear_node_array_container(&instance->nodes);
+    riat_token_free_array(instance->tokens.tokens, instance->tokens.token_count);
+    riat_clear_node_array_container(&instance->nodes);
     free(instance);
 }
 
-void RIAT_clear_node_array_container(RIAT_ScriptNodeArrayContainer *container) {
+void riat_clear_node_array_container(RIAT_ScriptNodeArrayContainer *container) {
     for(size_t i = 0; i < container->nodes_count; i++) {
         free(container->nodes[i].string_data);
     }
@@ -134,7 +134,7 @@ void RIAT_clear_node_array_container(RIAT_ScriptNodeArrayContainer *container) {
     container->nodes_count = 0;
 }
 
-void RIAT_token_free_array(RIAT_Token *tokens, size_t token_count) {
+void riat_token_free_array(RIAT_Token *tokens, size_t token_count) {
     for(size_t i = 0; i < token_count; i++) {
         free(tokens[i].token_string);
     }

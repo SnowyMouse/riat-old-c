@@ -24,7 +24,7 @@ namespace RIAT {
     public:
         SyntaxException(const RIAT_Instance &instance) noexcept {
             const char *file;
-            this->reason = RIAT_instance_get_last_compile_error(&instance, &this->line, &this->column, &file);
+            this->reason = riat_instance_get_last_compile_error(&instance, &this->line, &this->column, &file);
             this->file = file;
 
             char what_error_c[512];
@@ -70,7 +70,7 @@ namespace RIAT {
          * @throws RIAT::Exception on failure
          */
         void load_script(const char *script_source_data, size_t script_source_length, const char *file_name) {
-            handle_compile_error(RIAT_instance_load_script(instance.get(), script_source_data, script_source_length, file_name));
+            this->handle_compile_error(riat_instance_load_script(instance.get(), script_source_data, script_source_length, file_name));
         }
 
         /**
@@ -82,7 +82,7 @@ namespace RIAT {
          * @throws RIAT::Exception on failure
          */
         void load_script(const std::string &script_source_data, const char *file_name) {
-            return this->load_script(script_source_data.data(), script_source_data.size(), file_name);
+            this->load_script(script_source_data.data(), script_source_data.size(), file_name);
         }
 
         /**
@@ -91,10 +91,10 @@ namespace RIAT {
          * @throws RIAT::Exception on failure
          */
         void compile_scripts() {
-            handle_compile_error(RIAT_instance_compile_scripts(instance.get()));
+            this->handle_compile_error(riat_instance_compile_scripts(instance.get()));
         }
 
-        Instance(RIAT_CompileTarget compile_target) : instance(RIAT_instance_new(compile_target), RIAT_instance_delete) {
+        Instance(RIAT_CompileTarget compile_target) : instance(riat_instance_new(compile_target), riat_instance_delete) {
             if(this->instance.get() == nullptr) {
                 throw AllocationException();
             }

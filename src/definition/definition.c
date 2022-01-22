@@ -1,6 +1,6 @@
 #include "definition_array.h"
 
-const RIAT_BuiltinDefinition *RIAT_builtin_definition_search(const char *what, RIAT_CompileTarget compile_target, RIAT_BuiltinDefinitionType type) {
+const RIAT_BuiltinDefinition *riat_builtin_definition_search(const char *what, RIAT_CompileTarget compile_target, RIAT_BuiltinDefinitionType type) {
     size_t end = sizeof(definitions) / sizeof(definitions[0]);
     size_t start = 0;
     assert(end > start);

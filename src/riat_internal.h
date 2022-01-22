@@ -123,7 +123,7 @@ typedef struct RIAT_Instance {
  * @param tokens      pointer to first token to free
  * @param token_count number of tokens
  */
-void RIAT_token_free_array(RIAT_Token *tokens, size_t token_count);
+void riat_token_free_array(RIAT_Token *tokens, size_t token_count);
 
 /**
  * Parse the script source data into tokens
@@ -135,14 +135,14 @@ void RIAT_token_free_array(RIAT_Token *tokens, size_t token_count);
  * @param tokens               (output) pointer to the pointer to be set to the token array
  * @param token_count          (output) number of tokens
  */
-RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_source_data, size_t script_source_length, const char *file_name, RIAT_Token **tokens, size_t *token_count);
+RIAT_CompileResult riat_tokenize(RIAT_Instance *instance, const char *script_source_data, size_t script_source_length, const char *file_name, RIAT_Token **tokens, size_t *token_count);
 
 /**
  * Create a tree from the tokens
  * 
  * @param instance    instance context this is applicable to
  */
-RIAT_CompileResult RIAT_tree(RIAT_Instance *instance);
+RIAT_CompileResult riat_tree(RIAT_Instance *instance);
 
 typedef struct RIAT_Global {
     char name[32];
@@ -169,7 +169,7 @@ typedef struct RIAT_Script {
  * 
  * @param container container to free
  */
-void RIAT_clear_node_array_container(RIAT_ScriptNodeArrayContainer *container);
+void riat_clear_node_array_container(RIAT_ScriptNodeArrayContainer *container);
 
 /**
  * Convert a string to a script type
@@ -179,7 +179,7 @@ void RIAT_clear_node_array_container(RIAT_ScriptNodeArrayContainer *container);
  * 
  * @return      script type
  */
-RIAT_ScriptType RIAT_script_type_from_string(const char *type, bool *error);
+RIAT_ScriptType riat_script_type_from_string(const char *type, bool *error);
 
 /**
  * Convert a string to a value type
@@ -189,7 +189,7 @@ RIAT_ScriptType RIAT_script_type_from_string(const char *type, bool *error);
  * 
  * @return      value type
  */
-RIAT_ValueType RIAT_value_type_from_string(const char *type, bool *error);
+RIAT_ValueType riat_value_type_from_string(const char *type, bool *error);
 
 /**
  * Convert a value type to its string representation.
@@ -198,6 +198,6 @@ RIAT_ValueType RIAT_value_type_from_string(const char *type, bool *error);
  * 
  * @return     string representation of type
  */
-const char *RIAT_value_type_to_string(RIAT_ValueType type);
+const char *riat_value_type_to_string(RIAT_ValueType type);
 
 #endif

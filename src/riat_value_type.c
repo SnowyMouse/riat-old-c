@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-RIAT_ValueType RIAT_value_type_from_string(const char *type, bool *error) {
+RIAT_ValueType riat_value_type_from_string(const char *type, bool *error) {
     *error = false;
     if(strcmp(type, "void") == 0) {
         return RIAT_VALUE_TYPE_VOID;
@@ -146,7 +146,7 @@ RIAT_ValueType RIAT_value_type_from_string(const char *type, bool *error) {
     }
 }
 
-const char *RIAT_value_type_to_string(RIAT_ValueType type) {
+const char *riat_value_type_to_string(RIAT_ValueType type) {
     switch(type) {
         case RIAT_VALUE_TYPE_VOID:
             return "void";
@@ -249,7 +249,7 @@ const char *RIAT_value_type_to_string(RIAT_ValueType type) {
     }
 }
 
-RIAT_ScriptType RIAT_script_type_from_string(const char *type, bool *error) {
+RIAT_ScriptType riat_script_type_from_string(const char *type, bool *error) {
     *error = false;
     if(strcmp(type, "static") == 0) {
         return RIAT_SCRIPT_TYPE_STATIC;

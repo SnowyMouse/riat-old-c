@@ -21,7 +21,7 @@ static const char *find_next_token(const char *script_source_data, size_t source
     instance->last_compile_error.syntax_error_file = file; \
     return what;
 
-RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_source_data, size_t script_source_length, const char *file_name, RIAT_Token **tokens, size_t *token_count) {
+RIAT_CompileResult riat_tokenize(RIAT_Instance *instance, const char *script_source_data, size_t script_source_length, const char *file_name, RIAT_Token **tokens, size_t *token_count) {
     const char *tokenizer_data = script_source_data;
     size_t tokenizer_length = script_source_length;
     size_t line = 1, column = 1, file = instance->files.file_names_count;
@@ -45,7 +45,7 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
         /* Error? */
         if(info.is_error) {
             /* Clean up tokens */
-            RIAT_token_free_array(*tokens, *token_count);
+            riat_token_free_array(*tokens, *token_count);
 
             /* Report the error */
             line = info.line;
@@ -65,7 +65,7 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
 
             /* Did that fail? Oops! */
             if(tokens_new == NULL) {
-                RIAT_token_free_array(*tokens, *token_count);
+                riat_token_free_array(*tokens, *token_count);
                 instance->last_compile_error.result_int = RIAT_COMPILE_ALLOCATION_ERROR;
                 COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR, NULL, NULL);
             }
@@ -101,7 +101,7 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
         /* Allocate space for the token (as a string) so we can use it later */
         if(!token_str) {
             /* Clean up tokens */
-            RIAT_token_free_array(*tokens, *token_count);
+            riat_token_free_array(*tokens, *token_count);
 
             /* Report the error */
             COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR, NULL, NULL);
@@ -143,7 +143,7 @@ RIAT_CompileResult RIAT_tokenize(RIAT_Instance *instance, const char *script_sou
         /* Did we go negative?? */
         if(depth < 0) {
             /* Clean up tokens */
-            RIAT_token_free_array(*tokens, *token_count);
+            riat_token_free_array(*tokens, *token_count);
 
             /* Report the error */
             line = (*tokens)[i].line;

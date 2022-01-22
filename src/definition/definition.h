@@ -43,6 +43,6 @@ enum RIAT_BuiltinDefinitionIndexError {
     RIAT_BUILTIN_DEFINITION_INDEX_UNKNOWN = 65534
 };
 
-const RIAT_BuiltinDefinition *RIAT_builtin_definition_search(const char *what, RIAT_CompileTarget target, RIAT_BuiltinDefinitionType type);
+const RIAT_BuiltinDefinition *riat_builtin_definition_search(const char *what, RIAT_CompileTarget target, RIAT_BuiltinDefinitionType type);
 
 #endif
