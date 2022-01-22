@@ -12,10 +12,10 @@ extern "C" {
 /** Opaque instance pointer */
 typedef struct RIAT_Instance RIAT_Instance;
 
-/** Value type */
+/** Value type - value matches HCE's definitions */
 typedef enum RIAT_ValueType {
     /** Invalid */
-    RIAT_VALUE_TYPE_UNPARSED,
+    RIAT_VALUE_TYPE_UNPARSED = 0,
 
     /** Invalid */
     RIAT_VALUE_TYPE_SPECIAL_FORM,
@@ -85,22 +85,22 @@ typedef enum RIAT_ValueType {
     RIAT_VALUE_TYPE_SCENERY_NAME
 } RIAT_ValueType;
 
-/** Script type */
+/** Script type - value matches HCE's definitions */
 typedef enum RIAT_ScriptType {
-    /** Script can be executed at any time */
-    RIAT_SCRIPT_TYPE_STATIC,
+    /** Script is executed once on map load */
+    RIAT_SCRIPT_TYPE_STARTUP = 0,
 
-    /** Effectively the same as static */
-    RIAT_SCRIPT_TYPE_STUB,
+    /** Script is not executed until the 'wake' command */
+    RIAT_SCRIPT_TYPE_DORMANT,
 
     /** Script is executed repeatedly */
     RIAT_SCRIPT_TYPE_CONTINUOUS,
 
-    /** Script is executed once on map load */
-    RIAT_SCRIPT_TYPE_STARTUP,
+    /** Script can be executed at any time */
+    RIAT_SCRIPT_TYPE_STATIC,
 
-    /** Script is not executed until the 'wake' command */
-    RIAT_SCRIPT_TYPE_DORMANT
+    /** Effectively the same as static */
+    RIAT_SCRIPT_TYPE_STUB
 } RIAT_ScriptType;
 
 /* Script node */
@@ -108,7 +108,7 @@ typedef struct RIAT_Node {
     /** String data (NULL if none) */
     char *string_data;
 
-    /** Next node index */
+    /** Next node index (SIZE_MAX if none) */
     size_t next_node;
 
     /** Relevant file index (starts at 0) */
