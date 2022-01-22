@@ -19,62 +19,32 @@
 
 #define NEXT_NODE_NULL (SIZE_MAX)
 
-/* Script node */
-typedef struct RIAT_ScriptNode {
-    /* String data (NULL if none) */
-    char *string_data;
-
-    /* Next node index? */
-    size_t next_node;
-
-    /* Value type */
-    RIAT_ValueType type;
-
-    /* If this is false, it's a function call */
-    bool is_primitive;
-
-    /* If this is a global */
-    bool is_global;
-
-    /* Relevant file */
-    size_t file;
-
-    /* Relevant line */
-    size_t line;
-
-    /* Relevant column */
-    size_t column;
-
-    /* Used if not primitive or if a primitive number/boolean type (and not a global!) */ 
-    union {
-        /* Child node (if not primitive) */
-        size_t child_node;
-
-        /* 32-bit integer (if primitive long) */
-        int32_t long_int;
-
-        /* 16-bit integer (if primitive short) */
-        int16_t short_int;
-
-        /* 8-bit integer (if primitive boolean) */
-        int8_t bool_int;
-
-        /* 32-bit float (if primitive real) */
-        float real;
-    };
-} RIAT_ScriptNode;
-
 /* Node array container */
-typedef struct RIAT_ScriptNodeArrayContainer {
+typedef struct RIAT_NodeArrayContainer {
     /* Pointer to first node (or NULL) */
-    RIAT_ScriptNode *nodes;
+    RIAT_Node *nodes;
 
     /* Number of nodes in the array that are valid */
     size_t nodes_count;
 
     /* Number of nodes in the array that can fit */
     size_t nodes_capacity;
-} RIAT_ScriptNodeArrayContainer;
+} RIAT_NodeArrayContainer;
+
+/* Script and global array container */
+typedef struct RIAT_ScriptGlobalArrayContainer {
+    /* Number of globals */
+    size_t global_count;
+
+    /* Pointer to first global (or NULL) */
+    RIAT_Global *globals;
+
+    /* Number of scripts */
+    size_t script_count;
+
+    /* Pointer to first script (or NULL) */
+    RIAT_Script *scripts;
+} RIAT_ScriptGlobalArrayContainer;
 
 typedef struct RIAT_Token {
     char *token_string;
@@ -114,7 +84,10 @@ typedef struct RIAT_Instance {
     } tokens;
 
     /* All current nodes */
-    RIAT_ScriptNodeArrayContainer nodes;
+    struct {
+        RIAT_NodeArrayContainer nodes;
+        RIAT_ScriptGlobalArrayContainer script_globals;
+    } last_compile_result;
 } RIAT_Instance;
 
 /**
@@ -124,6 +97,13 @@ typedef struct RIAT_Instance {
  * @param token_count number of tokens
  */
 void riat_token_free_array(RIAT_Token *tokens, size_t token_count);
+
+/**
+ * Free resources used by the token
+ * 
+ * @param token token to free
+ */
+void riat_token_free(RIAT_Token *token);
 
 /**
  * Parse the script source data into tokens
@@ -144,32 +124,26 @@ RIAT_CompileResult riat_tokenize(RIAT_Instance *instance, const char *script_sou
  */
 RIAT_CompileResult riat_tree(RIAT_Instance *instance);
 
-typedef struct RIAT_Global {
-    char name[32];
-    size_t first_node;
-    RIAT_ValueType value_type;
-
-    size_t line, column, file;
-} RIAT_Global;
-
-typedef struct RIAT_Script {
-    char name[32];
-    size_t first_node;
-    RIAT_ValueType return_type;
-    RIAT_ScriptType script_type;
-
-    bool is_function_call;
-    size_t function_call_first_element;
-
-    size_t line, column, file;
-} RIAT_Script;
-
 /**
  * Free the node array container
  * 
  * @param container container to free
  */
-void riat_clear_node_array_container(RIAT_ScriptNodeArrayContainer *container);
+void riat_clear_node_array_container(RIAT_NodeArrayContainer *container);
+
+/**
+ * Free the script/global array container
+ * 
+ * @param container container to free
+ */
+void riat_clear_script_global_array_container(RIAT_ScriptGlobalArrayContainer *container);
+
+/**
+ * Free resources used by the node
+ * 
+ * @param node node to free
+ */
+void riat_node_free(RIAT_Node *node);
 
 /**
  * Convert a string to a script type

@@ -1,46 +1,49 @@
 #ifndef RAT_IN_A_TUBE_H
 #define RAT_IN_A_TUBE_H
 
-#include <stddef.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include <stddef.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 /** Opaque instance pointer */
 typedef struct RIAT_Instance RIAT_Instance;
 
 /** Value type */
 typedef enum RIAT_ValueType {
-    /* Generally does nothing */
+    /** Invalid */
     RIAT_VALUE_TYPE_UNPARSED,
 
-    /* ??? */
+    /** Invalid */
     RIAT_VALUE_TYPE_SPECIAL_FORM,
 
-    /* Function name (value is in string data - used in the first node of a function or script call) */
+    /** Function name (value is in string data - used in the first node of a function or script call) */
     RIAT_VALUE_TYPE_FUNCTION_NAME,
 
-    /* Passthrough (???) */
+    /** Passthrough - value type can be modified before compilation (invalid for script and global types) */
     RIAT_VALUE_TYPE_PASSTHROUGH,
 
-    /* Void - no value returned */
+    /** Void - no value returned */
     RIAT_VALUE_TYPE_VOID,
 
-    /* Boolean - not actually a boolean but a signed 8-bit value between -127 and 128. If not a primitive, see string data for where to get the value. */
+    /** Boolean - can be true or false */
     RIAT_VALUE_TYPE_BOOLEAN,
 
-    /* Real - 32-bit float. If not a primitive, see string data for where to get the value. */
+    /** Real - 32-bit float */
     RIAT_VALUE_TYPE_REAL,
 
-    /* Short - 16-bit signed int between -32768 and 32767. If not a primitive, see string data for where to get the value. */
+    /** Short - 16-bit signed int between -32768 and 32767 */
     RIAT_VALUE_TYPE_SHORT,
 
-    /* Long - 32-bit signed int between -2147483648 and 2147483647. If not a primitive, see string data for where to get the value. */
+    /** Long - 32-bit signed int between -2147483648 and 2147483647 */
     RIAT_VALUE_TYPE_LONG,
 
-    /* Everything below here has the value in string data. If not a primitive, see string data for where to get the value. */
+    /** String */
     RIAT_VALUE_TYPE_STRING,
+
     RIAT_VALUE_TYPE_SCRIPT,
     RIAT_VALUE_TYPE_TRIGGER_VOLUME,
     RIAT_VALUE_TYPE_CUTSCENE_FLAG,
@@ -84,12 +87,110 @@ typedef enum RIAT_ValueType {
 
 /** Script type */
 typedef enum RIAT_ScriptType {
+    /** Script can be executed at any time */
     RIAT_SCRIPT_TYPE_STATIC,
+
+    /** Effectively the same as static */
+    RIAT_SCRIPT_TYPE_STUB,
+
+    /** Script is executed repeatedly */
     RIAT_SCRIPT_TYPE_CONTINUOUS,
+
+    /** Script is executed once on map load */
     RIAT_SCRIPT_TYPE_STARTUP,
-    RIAT_SCRIPT_TYPE_DORMANT,
-    RIAT_SCRIPT_TYPE_STUB
+
+    /** Script is not executed until the 'wake' command */
+    RIAT_SCRIPT_TYPE_DORMANT
 } RIAT_ScriptType;
+
+/* Script node */
+typedef struct RIAT_Node {
+    /** String data (NULL if none) */
+    char *string_data;
+
+    /** Next node index */
+    size_t next_node;
+
+    /** Relevant file index (starts at 0) */
+    size_t file;
+
+    /** Relevant line index (starts at 1) */
+    size_t line;
+
+    /** Relevant column (starts at 1) */
+    size_t column;
+
+    /** Value type */
+    RIAT_ValueType type;
+
+    /** If true, the value is here. If this is false, it's a function call */
+    bool is_primitive;
+
+    /** If this is a global */
+    bool is_global;
+
+    /** Used if not primitive or if a primitive number/boolean type (and not a global!) */ 
+    union {
+        /** Child node (if not primitive), generally pointing to a function name */
+        size_t child_node;
+
+        /** 32-bit integer (if primitive long) */
+        int32_t long_int;
+
+        /** 16-bit integer (if primitive short) */
+        int16_t short_int;
+
+        /** 8-bit integer (if primitive boolean) */
+        int8_t bool_int;
+
+        /** 32-bit float (if primitive real) */
+        float real;
+    };
+} RIAT_Node;
+
+/** Script global */
+typedef struct RIAT_Global {
+    /** Name of global (null terminated) */
+    char name[32];
+
+    /** Index of first node */
+    size_t first_node;
+
+    /** Type of script */
+    RIAT_ValueType value_type;
+
+    /** Relevant file index (starts at 0) */
+    size_t file;
+
+    /** Relevant line index (starts at 1) */
+    size_t line;
+
+    /** Relevant column index (starts at 1) */
+    size_t column;
+} RIAT_Global;
+
+typedef struct RIAT_Script {
+    /** Name of global (null terminated) */
+    char name[32];
+
+    /** Index of first node */
+    size_t first_node;
+
+    /** Return type of script */
+    RIAT_ValueType return_type;
+
+    /** Type of script */
+    RIAT_ScriptType script_type;
+
+    /** Relevant file index (starts at 0) */
+    size_t file;
+
+    /** Relevant line index (starts at 1) */
+    size_t line;
+
+    /** Relevant column index (starts at 1) */
+    size_t column;
+} RIAT_Script;
 
 typedef enum RIAT_CompileTarget {
     RIAT_COMPILE_TARGET_ANY,
@@ -157,9 +258,39 @@ RIAT_CompileResult riat_instance_compile_scripts(RIAT_Instance *instance);
  * @param instance  instance to check
  * @param line      set to the line where the error occurred (if applicable)
  * @param column    set to the column where the error occurred (if applicable)
- * @param file      set to the file where the error occurred (if applicable)
+ * @param file      set to the file where the error occurred (if applicable - will be invalid if any more riat_instance_* functions that return a RIAT_CompileResult are called on the instance)
  */
 const char *riat_instance_get_last_compile_error(const RIAT_Instance *instance, size_t *line, size_t *column, const char **file);
+
+/**
+ * Get a pointer to the nodes
+ * 
+ * @param instance instance to get nodes
+ * @param count    number of nodes (output)
+ * 
+ * @return         pointer to node array (will be invalid if scripts are recompiled or the instance is deleted)
+ */
+const RIAT_Node *riat_instance_get_nodes(const RIAT_Instance *instance, size_t *count);
+
+/**
+ * Get a pointer to the scripts
+ * 
+ * @param instance instance to get scripts
+ * @param count    number of scripts (output)
+ * 
+ * @return         pointer to script array (will be invalid if scripts are recompiled or the instance is deleted)
+ */
+const RIAT_Script *riat_instance_get_scripts(const RIAT_Instance *instance, size_t *count);
+
+/**
+ * Get a pointer to the globals
+ * 
+ * @param instance instance to get nodes
+ * @param count    number of globals (output)
+ * 
+ * @return         pointer to global array (will be invalid if scripts are recompiled or the instance is deleted)
+ */
+const RIAT_Global *riat_instance_get_globals(const RIAT_Instance *instance, size_t *count);
 
 #ifdef __cplusplus
 }

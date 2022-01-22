@@ -8,21 +8,14 @@
 
 #define APPEND_NODE_ALLOCATION_ERROR SIZE_MAX
 
-typedef struct RIAT_ScriptGlobalContainer {
-    size_t global_count;
-    RIAT_Global *globals;
-    size_t script_count;
-    RIAT_Script *scripts;
-} RIAT_ScriptGlobalContainer;
-
-static size_t append_node_to_node_array(RIAT_ScriptNodeArrayContainer *container, const char *string_data);
+static size_t append_node_to_node_array(RIAT_NodeArrayContainer *container, const char *string_data);
 
 static RIAT_CompileResult read_block(
     RIAT_Instance *instance,
     RIAT_Token *tokens,
     size_t *ti,
-    RIAT_ScriptNodeArrayContainer *nodes,
-    RIAT_ScriptGlobalContainer *current_script_info,
+    RIAT_NodeArrayContainer *nodes,
+    RIAT_ScriptGlobalArrayContainer *current_script_info,
     size_t *root_node,
     bool is_script_block
 );
@@ -31,12 +24,12 @@ static RIAT_CompileResult read_next_element(
     RIAT_Instance *instance,
     RIAT_Token *tokens,
     size_t *ti,
-    RIAT_ScriptNodeArrayContainer *nodes,
-    RIAT_ScriptGlobalContainer *current_script_info,
+    RIAT_NodeArrayContainer *nodes,
+    RIAT_ScriptGlobalArrayContainer *current_script_info,
     size_t *node
 );
 
-static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_ScriptNodeArrayContainer *nodes, size_t node, RIAT_ValueType preferred_type, const RIAT_ScriptGlobalContainer *script_globals);
+static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_NodeArrayContainer *nodes, size_t node, RIAT_ValueType preferred_type, const RIAT_ScriptGlobalArrayContainer *script_globals);
 
 #define SYNTAX_ERROR_INSTANCE(instance, line, column, file) \
     instance->last_compile_error.syntax_error_file = file; \
@@ -73,7 +66,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
         } \
     }
 
-static const RIAT_ValueType *get_type_of_global(const char *name, const RIAT_ScriptGlobalContainer *script_globals, RIAT_CompileTarget target) {
+static const RIAT_ValueType *get_type_of_global(const char *name, const RIAT_ScriptGlobalArrayContainer *script_globals, RIAT_CompileTarget target) {
     /* If it's a global, try finding it, first! */
     for(size_t g = 0; g < script_globals->global_count; g++) {
         RIAT_Global *global = &script_globals->globals[g];
@@ -87,7 +80,7 @@ static const RIAT_ValueType *get_type_of_global(const char *name, const RIAT_Scr
     }
     return NULL;
 }
-static const RIAT_ValueType *get_type_of_function(const char *name, const RIAT_ScriptGlobalContainer *script_globals, RIAT_CompileTarget target) {
+static const RIAT_ValueType *get_type_of_function(const char *name, const RIAT_ScriptGlobalArrayContainer *script_globals, RIAT_CompileTarget target) {
     /* If it's a script, try finding it, first! */
     for(size_t s = 0; s < script_globals->script_count; s++) {
         RIAT_Script *script = &script_globals->scripts[s];
@@ -102,8 +95,8 @@ static const RIAT_ValueType *get_type_of_function(const char *name, const RIAT_S
     return NULL;
 }
 
-static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_ScriptNodeArrayContainer *nodes, size_t node, RIAT_ValueType preferred_type, const RIAT_ScriptGlobalContainer *script_globals) {
-    RIAT_ScriptNode *n = &nodes->nodes[node];
+static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_NodeArrayContainer *nodes, size_t node, RIAT_ValueType preferred_type, const RIAT_ScriptGlobalArrayContainer *script_globals) {
+    RIAT_Node *n = &nodes->nodes[node];
     bool numeric_preferred = preferred_type == RIAT_VALUE_TYPE_REAL || preferred_type == RIAT_VALUE_TYPE_LONG || preferred_type == RIAT_VALUE_TYPE_SHORT;
 
     if(n->is_primitive) {
@@ -186,14 +179,14 @@ static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_
     return RIAT_COMPILE_OK;
 }
 
-static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_ScriptNodeArrayContainer *nodes, size_t node, RIAT_ValueType preferred_type, const RIAT_ScriptGlobalContainer *script_globals) {
-    RIAT_ScriptNode *n = &nodes->nodes[node];
+static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_NodeArrayContainer *nodes, size_t node, RIAT_ValueType preferred_type, const RIAT_ScriptGlobalArrayContainer *script_globals) {
+    RIAT_Node *n = &nodes->nodes[node];
 
     /* Duh. This needs to be a block. */
     assert(!n->is_primitive);
 
     /* First element needs to be a function name */
-    RIAT_ScriptNode *function_name_node = &nodes->nodes[n->child_node];
+    RIAT_Node *function_name_node = &nodes->nodes[n->child_node];
     assert(function_name_node->is_primitive);
     function_name_node->type = RIAT_VALUE_TYPE_FUNCTION_NAME;
     const char *function_name = function_name_node->string_data;
@@ -273,7 +266,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
     /* Are there no arguments yet some were given? */
     if(max_arguments == 0) {
         if(function_name_node->next_node != NEXT_NODE_NULL) {
-            RIAT_ScriptNode *element_node = &nodes->nodes[function_name_node->next_node];
+            RIAT_Node *element_node = &nodes->nodes[function_name_node->next_node];
             snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "'%s' takes no parameters but a parameter was given", function_name);
             SYNTAX_ERROR_INSTANCE(instance, element_node->line, element_node->column, element_node->file);
             return RIAT_COMPILE_SYNTAX_ERROR;
@@ -305,7 +298,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
 
             if(argument_index == 2) {
                 if(strcmp(function_name, "set") == 0) {
-                    RIAT_ScriptNode *global_name_node = &nodes->nodes[parameter_elements[0]];
+                    RIAT_Node *global_name_node = &nodes->nodes[parameter_elements[0]];
                     if(!global_name_node->is_primitive) {
                         snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "set takes a global, but a function call was given instead");
                         SYNTAX_ERROR_INSTANCE(instance, global_name_node->line, global_name_node->column, global_name_node->file);
@@ -331,7 +324,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
                 }
                 else if(strcmp(function_name, "=") == 0 || strcmp(function_name, "!=") == 0) {
                     size_t e0 = parameter_elements[0], e1 = parameter_elements[1];
-                    RIAT_ScriptNode *n0 = &nodes->nodes[e0], *n1 = &nodes->nodes[e1];
+                    RIAT_Node *n0 = &nodes->nodes[e0], *n1 = &nodes->nodes[e1];
 
                     const RIAT_ValueType *g0 = n0->is_primitive ? get_type_of_global(n0->string_data, script_globals, instance->compile_target) : NULL;
                     const RIAT_ValueType *g1 = n1->is_primitive ? get_type_of_global(n1->string_data, script_globals, instance->compile_target) : NULL;
@@ -387,7 +380,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_Sc
         /* Everything else... */
         else {
             for(size_t element = function_name_node->next_node; element != NEXT_NODE_NULL; argument_index++) {
-                RIAT_ScriptNode *element_node = &nodes->nodes[element];
+                RIAT_Node *element_node = &nodes->nodes[element];
                 const RIAT_BuiltinFunctionParameter *parameter;
 
                 /* Did we exceed the max number of arguments? If so, check if the last argument has 'many' set. */
@@ -468,11 +461,11 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
     RIAT_Token *tokens = instance->tokens.tokens;
     size_t token_count = instance->tokens.token_count;
 
-    RIAT_ScriptGlobalContainer script_global_list = {};
+    RIAT_ScriptGlobalArrayContainer script_global_list = {};
     size_t script_process_count = 0;
     size_t global_process_count = 0;
 
-    RIAT_ScriptNodeArrayContainer node_array = {};
+    RIAT_NodeArrayContainer node_array = {};
     size_t node_count = 0;
 
     /* Figure out how many scripts/globals we have. This saves allocations and verifies that all top-level nodes are scripts or globals. */
@@ -649,45 +642,30 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
     }
 
     #ifndef NDEBUG
-    printf("DEBUG: Compiled %zu global%s and %zu script%s into %zu node%s\n", script_global_list.global_count, script_global_list.global_count == 1 ? "" : "s", script_global_list.script_count, script_global_list.script_count == 1 ? "" : "s", node_array.nodes_count, node_array.nodes_count == 1 ? "" : "s");
-    
     /* Nothing should be unparsed */
     for(size_t n = 0; n < node_array.nodes_count; n++) {
         assert(node_array.nodes[n].type != RIAT_VALUE_TYPE_UNPARSED);
     }
     #endif
 
-    /* Merge the nodes */
-    size_t old_node_count = instance->nodes.nodes_count;
-    size_t new_node_count = instance->nodes.nodes_count + node_array.nodes_capacity;
-    RIAT_ScriptNode *instance_new_nodes = realloc(instance->nodes.nodes, sizeof(*instance->nodes.nodes) * new_node_count);
-    if(instance_new_nodes == NULL) {
-        result = RIAT_COMPILE_ALLOCATION_ERROR;
-        goto end;
-    }
-    instance->nodes.nodes = instance_new_nodes;
-    instance->nodes.nodes_count = new_node_count;
-    instance->nodes.nodes_capacity = new_node_count;
-    for(size_t n = 0; n < node_array.nodes_count; n++) {
-        RIAT_ScriptNode *node = &node_array.nodes[n];
+    /* Clear the old results */
+    riat_clear_node_array_container(&instance->last_compile_result.nodes);
+    riat_clear_script_global_array_container(&instance->last_compile_result.script_globals);
 
-        if(!node->is_primitive) {
-            node->child_node += new_node_count;
-        }
+    /* Copy the pointer/counts over */
+    instance->last_compile_result.script_globals = script_global_list;
+    instance->last_compile_result.nodes = node_array;
 
-        if(node->next_node != NEXT_NODE_NULL) {
-            node->next_node += new_node_count;
-        }
-    }
-    memcpy(instance->nodes.nodes + old_node_count, node_array.nodes, node_array.nodes_count);
-
-    /* Set the node count to 0 since the temporary nodes are no longer valid due to being moved */
-    node_array.nodes_count = 0;
+    /* Zero these out */
+    memset(&node_array, 0, sizeof(node_array));
+    memset(&script_global_list, 0, sizeof(script_global_list));
 
     end:
-    free(script_global_list.scripts);
-    free(script_global_list.globals);
+
+    /* Free our temporary results (if we have any) */
+    riat_clear_script_global_array_container(&script_global_list);
     riat_clear_node_array_container(&node_array);
+
     return result;
 }
 
@@ -695,8 +673,8 @@ static RIAT_CompileResult read_block(
     RIAT_Instance *instance,
     RIAT_Token *tokens,
     size_t *ti,
-    RIAT_ScriptNodeArrayContainer *nodes,
-    RIAT_ScriptGlobalContainer *current_script_info,
+    RIAT_NodeArrayContainer *nodes,
+    RIAT_ScriptGlobalArrayContainer *current_script_info,
     size_t *root_node,
     bool is_script_block
 ) {
@@ -774,12 +752,12 @@ static RIAT_CompileResult read_block(
             }
 
             /* (if expression_node then_node) */
-            RIAT_ScriptNode *if_fn_call_node = &nodes->nodes[if_fn_call_index];
-            RIAT_ScriptNode *if_fn_name_call_node = &nodes->nodes[if_fn_name_call_index];
+            RIAT_Node *if_fn_call_node = &nodes->nodes[if_fn_call_index];
+            RIAT_Node *if_fn_name_call_node = &nodes->nodes[if_fn_name_call_index];
             if_fn_name_call_node->is_primitive = true;
 
-            RIAT_ScriptNode *expression_node = &nodes->nodes[if_expression_node_index];
-            RIAT_ScriptNode *then_node = &nodes->nodes[then_expression_node_index];
+            RIAT_Node *expression_node = &nodes->nodes[if_expression_node_index];
+            RIAT_Node *then_node = &nodes->nodes[then_expression_node_index];
 
             if_fn_call_node->child_node = if_fn_name_call_index;
             if_fn_name_call_node->next_node = if_expression_node_index;
@@ -844,8 +822,8 @@ static RIAT_CompileResult read_next_element(
     RIAT_Instance *instance,
     RIAT_Token *tokens,
     size_t *ti,
-    RIAT_ScriptNodeArrayContainer *nodes,
-    RIAT_ScriptGlobalContainer *current_script_info,
+    RIAT_NodeArrayContainer *nodes,
+    RIAT_ScriptGlobalArrayContainer *current_script_info,
     size_t *node
 ) {
     RIAT_Token *first_token = &tokens[*ti];
@@ -869,7 +847,7 @@ static RIAT_CompileResult read_next_element(
         UNREACHABLE();
     }
         
-    RIAT_ScriptNode *element_node = &nodes->nodes[*node];
+    RIAT_Node *element_node = &nodes->nodes[*node];
     element_node->column = first_token->column;
     element_node->line = first_token->line;
     element_node->file = first_token->file;
@@ -877,11 +855,11 @@ static RIAT_CompileResult read_next_element(
     return RIAT_COMPILE_OK;
 }
 
-static size_t append_node_to_node_array(RIAT_ScriptNodeArrayContainer *container, const char *string_data) {
+static size_t append_node_to_node_array(RIAT_NodeArrayContainer *container, const char *string_data) {
     /* Capacity met? If so, reallocate with double size (or set to 16 if size is 0) */
     if(container->nodes_capacity == container->nodes_count) {
         size_t new_capacity = container->nodes_capacity > 0 ? container->nodes_capacity * 2 : 16;
-        RIAT_ScriptNode *new_array = realloc(container->nodes, sizeof(*container->nodes) * new_capacity);
+        RIAT_Node *new_array = realloc(container->nodes, sizeof(*container->nodes) * new_capacity);
 
         /* Allocation failure = return APPEND_NODE_ALLOCATION_ERROR */
         if(new_array == NULL) {
@@ -896,7 +874,7 @@ static size_t append_node_to_node_array(RIAT_ScriptNodeArrayContainer *container
     /* Set the string data then */
     size_t next_node_index = container->nodes_count;
     container->nodes_count++;
-    RIAT_ScriptNode *next_node = &container->nodes[next_node_index];
+    RIAT_Node *next_node = &container->nodes[next_node_index];
     memset(next_node, 0, sizeof(*next_node));
     next_node->next_node = NEXT_NODE_NULL;
     next_node->string_data = string_data != NULL ? strdup(string_data) : NULL;

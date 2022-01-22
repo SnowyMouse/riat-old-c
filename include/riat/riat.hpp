@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <memory>
 #include <string>
+#include <vector>
 #include "riat.h"
 
 namespace RIAT {
@@ -24,7 +25,7 @@ namespace RIAT {
     public:
         SyntaxException(const RIAT_Instance &instance) noexcept {
             const char *file;
-            this->reason = riat_instance_get_last_compile_error(&instance, &this->line, &this->column, &file);
+            this->reason = ::riat_instance_get_last_compile_error(&instance, &this->line, &this->column, &file);
             this->file = file;
 
             char what_error_c[512];
@@ -70,7 +71,7 @@ namespace RIAT {
          * @throws RIAT::Exception on failure
          */
         void load_script(const char *script_source_data, size_t script_source_length, const char *file_name) {
-            this->handle_compile_error(riat_instance_load_script(instance.get(), script_source_data, script_source_length, file_name));
+            this->handle_compile_error(::riat_instance_load_script(this->instance.get(), script_source_data, script_source_length, file_name));
         }
 
         /**
@@ -91,7 +92,40 @@ namespace RIAT {
          * @throws RIAT::Exception on failure
          */
         void compile_scripts() {
-            this->handle_compile_error(riat_instance_compile_scripts(instance.get()));
+            this->handle_compile_error(::riat_instance_compile_scripts(this->instance.get()));
+        }
+
+        /**
+         * Get the nodes.
+         * 
+         * @return vector of nodes
+         */
+        std::vector<RIAT_Node> get_nodes() const {
+            size_t count;
+            auto *nodes = ::riat_instance_get_nodes(this->instance.get(), &count);
+            return std::vector<RIAT_Node>(nodes, nodes + count);
+        }
+
+        /**
+         * Get the scripts.
+         * 
+         * @return vector of scripts
+         */
+        std::vector<RIAT_Script> get_scripts() const {
+            size_t count;
+            auto *scripts = ::riat_instance_get_scripts(this->instance.get(), &count);
+            return std::vector<RIAT_Script>(scripts, scripts + count);
+        }
+
+        /**
+         * Get the globals.
+         * 
+         * @return vector of globals
+         */
+        std::vector<RIAT_Global> get_globals() const {
+            size_t count;
+            auto *globals = ::riat_instance_get_globals(this->instance.get(), &count);
+            return std::vector<RIAT_Global>(globals, globals + count);
         }
 
         Instance(RIAT_CompileTarget compile_target) : instance(riat_instance_new(compile_target), riat_instance_delete) {

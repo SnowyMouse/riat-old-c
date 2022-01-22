@@ -104,11 +104,6 @@ RIAT_CompileResult riat_instance_compile_scripts(RIAT_Instance *instance) {
         COMPILE_RETURN_ERROR(result);
     }
 
-    /* Free it all */
-    riat_token_free_array(instance->tokens.tokens, instance->tokens.token_count);
-    instance->tokens.token_count = 0;
-    instance->tokens.tokens = NULL;
-
     return RIAT_COMPILE_OK;
 }
 
@@ -121,22 +116,59 @@ void riat_instance_delete(RIAT_Instance *instance) {
     }
 
     riat_token_free_array(instance->tokens.tokens, instance->tokens.token_count);
-    riat_clear_node_array_container(&instance->nodes);
+    riat_clear_node_array_container(&instance->last_compile_result.nodes);
+    riat_clear_script_global_array_container(&instance->last_compile_result.script_globals);
+
     free(instance);
 }
 
-void riat_clear_node_array_container(RIAT_ScriptNodeArrayContainer *container) {
+void riat_node_free(RIAT_Node *node) {
+    free(node->string_data);
+}
+
+void riat_clear_node_array_container(RIAT_NodeArrayContainer *container) {
     for(size_t i = 0; i < container->nodes_count; i++) {
-        free(container->nodes[i].string_data);
+        riat_node_free(&container->nodes[i]);
     }
     free(container->nodes);
     container->nodes_capacity = 0;
     container->nodes_count = 0;
+    container->nodes = NULL;
+}
+
+void riat_clear_script_global_array_container(RIAT_ScriptGlobalArrayContainer *container) {
+    free(container->globals);
+    free(container->scripts);
+
+    container->global_count = 0;
+    container->script_count = 0;
+
+    container->globals = NULL;
+    container->scripts = NULL;
+}
+
+void riat_token_free(RIAT_Token *token) {
+    free(token->token_string);
 }
 
 void riat_token_free_array(RIAT_Token *tokens, size_t token_count) {
     for(size_t i = 0; i < token_count; i++) {
-        free(tokens[i].token_string);
+        riat_token_free(&tokens[i]);
     }
     free(tokens);
+}
+
+const RIAT_Node *riat_instance_get_nodes(const RIAT_Instance *instance, size_t *count) {
+    *count = instance->last_compile_result.nodes.nodes_count;
+    return instance->last_compile_result.nodes.nodes;
+}
+
+const RIAT_Global *riat_instance_get_globals(const RIAT_Instance *instance, size_t *count) {
+    *count = instance->last_compile_result.script_globals.global_count;
+    return instance->last_compile_result.script_globals.globals;
+}
+
+const RIAT_Script *riat_instance_get_scripts(const RIAT_Instance *instance, size_t *count) {
+    *count = instance->last_compile_result.script_globals.script_count;
+    return instance->last_compile_result.script_globals.scripts;
 }

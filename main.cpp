@@ -26,6 +26,10 @@ int main(int argc, const char **argv) {
         }
 
         instance.compile_scripts();
+
+        printf("Scripts: %zu\n", instance.get_scripts().size());
+        printf("Globals: %zu\n", instance.get_globals().size());
+        printf("Nodes: %zu\n", instance.get_nodes().size());
     }
     catch(std::exception &e) {
         std::printf("%s Exception error: %s\n", typeid(e).name(), e.what());
