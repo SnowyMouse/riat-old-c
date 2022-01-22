@@ -70,8 +70,8 @@ namespace RIAT {
          * 
          * @throws RIAT::Exception on failure
          */
-        void load_script(const char *script_source_data, std::size_t script_source_length, const char *file_name) {
-            this->handle_compile_error(::riat_instance_load_script(this->instance.get(), script_source_data, script_source_length, file_name));
+        void load_script_source(const char *script_source_data, std::size_t script_source_length, const char *file_name) {
+            this->handle_compile_error(::riat_instance_load_script_source(this->instance.get(), script_source_data, script_source_length, file_name));
         }
 
         /**

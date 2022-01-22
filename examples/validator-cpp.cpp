@@ -29,7 +29,7 @@ int main(int argc, const char **argv) {
             std::fclose(f);
 
             // And now load it
-            instance.load_script(data.data(), data.size(), argv[i]);
+            instance.load_script_source(data.data(), data.size(), argv[i]);
         }
 
         // Now compile the scripts

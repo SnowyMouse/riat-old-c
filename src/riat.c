@@ -33,7 +33,7 @@ const char *riat_instance_get_last_compile_error(const RIAT_Instance *instance, 
     instance->last_compile_error.result_int = what; \
     return what;
 
-RIAT_CompileResult riat_instance_load_script(RIAT_Instance *instance, const char *script_source_data, size_t script_source_length, const char *file_name) {
+RIAT_CompileResult riat_instance_load_script_source(RIAT_Instance *instance, const char *script_source_data, size_t script_source_length, const char *file_name) {
     /* Clear the error */
     memset(&instance->last_compile_error, 0, sizeof(instance->last_compile_error));
 

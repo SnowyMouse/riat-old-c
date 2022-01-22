@@ -241,7 +241,7 @@ typedef enum RIAT_CompileResult {
  * 
  * @return                     result
  */
-RIAT_CompileResult riat_instance_load_script(RIAT_Instance *instance, const char *script_source_data, size_t script_source_length, const char *file_name);
+RIAT_CompileResult riat_instance_load_script_source(RIAT_Instance *instance, const char *script_source_data, size_t script_source_length, const char *file_name);
 
 /**
  * Compile the loaded script(s)
