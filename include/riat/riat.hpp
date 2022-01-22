@@ -70,20 +70,8 @@ namespace RIAT {
          * 
          * @throws RIAT::Exception on failure
          */
-        void load_script(const char *script_source_data, size_t script_source_length, const char *file_name) {
+        void load_script(const char *script_source_data, std::size_t script_source_length, const char *file_name) {
             this->handle_compile_error(::riat_instance_load_script(this->instance.get(), script_source_data, script_source_length, file_name));
-        }
-
-        /**
-         * Load the given script
-         * 
-         * @param script_source_data script source data
-         * @param file_name          name of the file (for error reporting)
-         * 
-         * @throws RIAT::Exception on failure
-         */
-        void load_script(const std::string &script_source_data, const char *file_name) {
-            this->load_script(script_source_data.data(), script_source_data.size(), file_name);
         }
 
         /**
@@ -102,7 +90,7 @@ namespace RIAT {
          */
         std::vector<RIAT_Node> get_nodes() const {
             size_t count;
-            auto *nodes = ::riat_instance_get_nodes(this->instance.get(), &count);
+            const auto *nodes = ::riat_instance_get_nodes(this->instance.get(), &count);
             return std::vector<RIAT_Node>(nodes, nodes + count);
         }
 
@@ -113,7 +101,7 @@ namespace RIAT {
          */
         std::vector<RIAT_Script> get_scripts() const {
             size_t count;
-            auto *scripts = ::riat_instance_get_scripts(this->instance.get(), &count);
+            const auto *scripts = ::riat_instance_get_scripts(this->instance.get(), &count);
             return std::vector<RIAT_Script>(scripts, scripts + count);
         }
 
@@ -124,11 +112,11 @@ namespace RIAT {
          */
         std::vector<RIAT_Global> get_globals() const {
             size_t count;
-            auto *globals = ::riat_instance_get_globals(this->instance.get(), &count);
+            const auto *globals = ::riat_instance_get_globals(this->instance.get(), &count);
             return std::vector<RIAT_Global>(globals, globals + count);
         }
 
-        Instance(RIAT_CompileTarget compile_target) : instance(riat_instance_new(compile_target), riat_instance_delete) {
+        Instance(RIAT_CompileTarget compile_target) : instance(::riat_instance_new(compile_target), ::riat_instance_delete) {
             if(this->instance.get() == nullptr) {
                 throw AllocationException();
             }

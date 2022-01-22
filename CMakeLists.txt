@@ -24,9 +24,12 @@ add_custom_command (OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/src/definition/definitio
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/definition/definition_codegen.py" "${CMAKE_CURRENT_SOURCE_DIR}/src/definition/definition.json"
 )
 
-add_executable(riat-test
-    main.cpp
-)
-set_property(TARGET riat-test PROPERTY C_STANDARD 11)
-set_property(TARGET riat-test PROPERTY CXX_STANDARD 20)
-target_link_libraries(riat-test riat)
+option(RIAT_BUILD_EXAMPLES "Compile the examples?" OFF)
+if(RIAT_BUILD_EXAMPLES)
+    add_executable(riat-validator-cpp
+        examples/validator-cpp.cpp
+    )
+    set_property(TARGET riat-validator-cpp PROPERTY CXX_STANDARD 11)
+    target_link_libraries(riat-validator-cpp riat)
+endif()
+
