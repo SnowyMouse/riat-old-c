@@ -790,7 +790,7 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
             bool found_node = false;
             for(size_t s = 0; s < script_global_list.script_count && !found_node; s++) {
                 if(strcmp(function_name->string_data, script_global_list.scripts[s].name) == 0) {
-                    node->call_index = n;
+                    node->call_index = s;
                     found_node = true;
                 }
             }
