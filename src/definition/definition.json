@@ -6994,6 +6994,7 @@
             "name": "player_effect_set_max_rumble",
             "type": "void",
             "description": "DEPRECATED: Use player_effect_set_max_vibrate, this is only to keep compatibility with Custom Edition",
+            "note": "Not actually present in Gearbox releases (gets replaced with player_effect_set_max_vibrate)",
             "parameters": [
                 {
                     "type": "real"
@@ -7004,6 +7005,9 @@
             ],
             "engines": {
                 "mcc-cea": null,
+                "gbx-retail": null,
+                "gbx-demo": null,
+                "gbx-custom": null,
                 "xbox": null
             }
         },
