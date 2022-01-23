@@ -128,8 +128,14 @@ typedef struct RIAT_Node {
     /** If true, the value is here. If this is false, it's a function call */
     bool is_primitive;
 
-    /** If this is a global */
+    /** If this is a global, then the name of the global is in the string data */
     bool is_global;
+
+    /** If this is a script call, then it works like a function call but it's a script that is called instead */
+    bool is_script_call;
+
+    /** Index of the call */
+    uint16_t call_index;
 
     /** Used if not primitive or if a primitive number/boolean type (and not a global!) */ 
     union {

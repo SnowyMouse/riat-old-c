@@ -218,6 +218,8 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
             max_arguments = 0;
             script = script_maybe;
             n->type = script->return_type;
+            n->is_script_call = true;
+            n->call_index = s;
             goto iterate_elements;
         }
     }
