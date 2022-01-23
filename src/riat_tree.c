@@ -737,6 +737,47 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
         goto end;
     }
 
+    /* Resolve stubbed functions */
+    for(size_t s = 0; s < script_global_list.script_count; s++) {
+        bool should_remove = false;
+
+        RIAT_Script *script = &script_global_list.scripts[s];
+        if(script->script_type == RIAT_SCRIPT_TYPE_STUB) {
+            for(size_t t = 0; t < script_global_list.script_count; t++) {
+                if(t == s) {
+                    continue;
+                }
+                RIAT_Script *script_other = &script_global_list.scripts[t];
+
+                /* It's a match! */
+                if(strcmp(script_other->name, script->name) == 0) {
+                    if(script_other->script_type != RIAT_SCRIPT_TYPE_STATIC) {
+                        COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script->file, script->line, script->column, "cannot replace stub script '%s' with non-static script '%s'", script->name, script_other->name);
+                    }
+                    else if(script_other->return_type != script->return_type) {
+                        COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script->file, script->line, script->column, "cannot replace stub script '%s' (returns %s) with script '%s' (returns %s)", script->name, riat_value_type_to_string(script->return_type), script_other->name, riat_value_type_to_string(script_other->return_type));
+                    }
+
+                    should_remove = true;
+                    break;
+                }
+            }
+        }
+
+        /* Delete the script */
+        if(should_remove) {
+            script_global_list.script_count--;
+
+            for(size_t t = s; t < script_global_list.script_count; t++) {
+                RIAT_Script *a = &script_global_list.scripts[t];
+                RIAT_Script *b = &script_global_list.scripts[t + 1];
+                memcpy(a, b, sizeof(*a));
+            }
+
+            s--;
+        }
+    }
+
     #ifndef NDEBUG
     /* Nothing should be unparsed */
     for(size_t n = 0; n < node_array.nodes_count; n++) {

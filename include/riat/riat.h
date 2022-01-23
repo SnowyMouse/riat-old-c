@@ -104,7 +104,7 @@ typedef enum RIAT_ScriptType {
     /** Script can be executed at any time */
     RIAT_SCRIPT_TYPE_STATIC,
 
-    /** Effectively the same as static */
+    /** Effectively the same as static except it will be replaced by a static script of the same type */
     RIAT_SCRIPT_TYPE_STUB
 } RIAT_ScriptType;
 
