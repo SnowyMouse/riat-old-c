@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <stdbool.h>
 #include <assert.h>
 #include "definition/definition.h"
@@ -178,7 +179,30 @@ static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_
                 snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "expected a script name; got '%s' instead", n->string_data);
                 SYNTAX_ERROR_INSTANCE(instance, n->line, n->column, n->file);
                 return RIAT_COMPILE_SYNTAX_ERROR;
+
+            case RIAT_VALUE_TYPE_SOUND:
+            case RIAT_VALUE_TYPE_EFFECT:
+            case RIAT_VALUE_TYPE_DAMAGE:
+            case RIAT_VALUE_TYPE_LOOPING_SOUND:
+            case RIAT_VALUE_TYPE_ANIMATION_GRAPH:
+            case RIAT_VALUE_TYPE_ACTOR_VARIANT:
+            case RIAT_VALUE_TYPE_DAMAGE_EFFECT:
+            case RIAT_VALUE_TYPE_OBJECT_DEFINITION: {
+                /* Tag paths have to be lowercase */
+                bool warn_upper = false;
+                for(char *c = n->string_data; *c != 0; c++) {
+                    char lower = tolower(*c);
+                    warn_upper = warn_upper || lower != *c;
+                    *c = lower;
+                }
+                if(warn_upper) {
+                    instance->warn_callback(instance, "uppercase tag path (will be compiled as lowercase)", instance->files.file_names[n->file], n->line, n->column);
+                }
+                break;
+            }
+            
             default:
+
                 break;
         }
         end:

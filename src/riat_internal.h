@@ -60,6 +60,12 @@ typedef struct RIAT_Instance {
     /* Compile target */
     RIAT_CompileTarget compile_target;
 
+    /* User data */
+    void *user_data;
+
+    /* Warning callback */
+    RIAT_InstanceWarnCallback warn_callback;
+
     /* Compiled files */
     struct {
         char **file_names;

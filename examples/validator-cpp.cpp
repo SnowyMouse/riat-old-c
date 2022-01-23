@@ -1,6 +1,10 @@
 #include <vector>
 #include "../include/riat/riat.hpp"
 
+static void warn(RIAT_Instance *instance, const char *message, const char *file, std::size_t line, std::size_t column) {
+    std::printf("%s:%zu:%zu: warning: %s\n", file, line, column, message);
+}
+
 int main(int argc, const char **argv) {
     // If we don't supply a script, show a "usage" message
     if(argc == 1) {
@@ -10,6 +14,8 @@ int main(int argc, const char **argv) {
 
     // Declare our instance here
     RIAT::Instance instance;
+
+    instance.set_warn_callback(warn);
 
     try {
         // Go through each script file, read it from memory, and load it
@@ -38,7 +44,7 @@ int main(int argc, const char **argv) {
 
     // If an error occurs, we can catch it here
     catch(std::exception &e) {
-        std::printf("%s Exception error: %s\n", typeid(e).name(), e.what());
+        std::fprintf(stderr, "%s\n", e.what());
         return EXIT_FAILURE;
     }
 

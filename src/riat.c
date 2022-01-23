@@ -5,8 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+static void default_warn_callback(RIAT_Instance *instance, const char *message, const char *file, size_t line, size_t column) {}
+
 RIAT_Instance *riat_instance_new(RIAT_CompileTarget compile_target) {
     RIAT_Instance *instance = calloc(sizeof(*instance), 1);
+    riat_instance_set_warn_callback(instance, default_warn_callback);
     if(!instance) {
         return NULL;
     }
@@ -171,4 +174,16 @@ const RIAT_Global *riat_instance_get_globals(const RIAT_Instance *instance, size
 const RIAT_Script *riat_instance_get_scripts(const RIAT_Instance *instance, size_t *count) {
     *count = instance->last_compile_result.script_globals.script_count;
     return instance->last_compile_result.script_globals.scripts;
+}
+
+void riat_instance_set_warn_callback(RIAT_Instance *instance, RIAT_InstanceWarnCallback callback) {
+    instance->warn_callback = callback;
+}
+
+void riat_instance_set_user_data(RIAT_Instance *instance, void *user_data) {
+    instance->user_data = user_data;
+}
+
+void *riat_instance_get_user_data(const RIAT_Instance *instance) {
+    return instance->user_data;
 }

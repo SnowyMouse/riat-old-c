@@ -29,7 +29,7 @@ namespace RIAT {
             this->file = file;
 
             char what_error_c[512];
-            std::snprintf(what_error_c, sizeof(what_error_c), "%s @ %s:%zu:%zu", this->reason.c_str(), this->file.c_str(), this->line, this->column);
+            std::snprintf(what_error_c, sizeof(what_error_c), "%s:%zu:%zu: error: %s", this->file.c_str(), this->line, this->column, this->reason.c_str());
             what_error = what_error_c;
         };
         const char *what() const noexcept override {
@@ -71,7 +71,7 @@ namespace RIAT {
          * @throws RIAT::Exception on failure
          */
         void load_script_source(const char *script_source_data, std::size_t script_source_length, const char *file_name) {
-            this->handle_compile_error(::riat_instance_load_script_source(this->instance.get(), script_source_data, script_source_length, file_name));
+            this->handle_compile_error(::riat_instance_load_script_source(this->get_instance(), script_source_data, script_source_length, file_name));
         }
 
         /**
@@ -80,7 +80,7 @@ namespace RIAT {
          * @throws RIAT::Exception on failure
          */
         void compile_scripts() {
-            this->handle_compile_error(::riat_instance_compile_scripts(this->instance.get()));
+            this->handle_compile_error(::riat_instance_compile_scripts(this->get_instance()));
         }
 
         /**
@@ -90,7 +90,7 @@ namespace RIAT {
          */
         std::vector<RIAT_Node> get_nodes() const {
             size_t count;
-            const auto *nodes = ::riat_instance_get_nodes(this->instance.get(), &count);
+            const auto *nodes = ::riat_instance_get_nodes(this->get_instance(), &count);
             return std::vector<RIAT_Node>(nodes, nodes + count);
         }
 
@@ -101,7 +101,7 @@ namespace RIAT {
          */
         std::vector<RIAT_Script> get_scripts() const {
             size_t count;
-            const auto *scripts = ::riat_instance_get_scripts(this->instance.get(), &count);
+            const auto *scripts = ::riat_instance_get_scripts(this->get_instance(), &count);
             return std::vector<RIAT_Script>(scripts, scripts + count);
         }
 
@@ -112,8 +112,53 @@ namespace RIAT {
          */
         std::vector<RIAT_Global> get_globals() const {
             size_t count;
-            const auto *globals = ::riat_instance_get_globals(this->instance.get(), &count);
+            const auto *globals = ::riat_instance_get_globals(this->get_instance(), &count);
             return std::vector<RIAT_Global>(globals, globals + count);
+        }
+
+        /**
+         * Set the warn calllback
+         * 
+         * @param callback callback
+         */
+        void set_warn_callback(RIAT_InstanceWarnCallback callback) noexcept {
+            ::riat_instance_set_warn_callback(this->get_instance(), callback);
+        }
+
+        /**
+         * Get the instance handle
+         * 
+         * @return instance
+         */
+        const RIAT_Instance *get_instance() const noexcept {
+            return this->instance.get();
+        }
+
+        /**
+         * Get the instance handle
+         * 
+         * @return instance
+         */
+        RIAT_Instance *get_instance() noexcept {
+            return this->instance.get();
+        }
+
+        /**
+         * Set the user data
+         * 
+         * @param user_data user data
+         */
+        void set_user_data(void *user_data) noexcept {
+            ::riat_instance_set_user_data(this->get_instance(), user_data);
+        }
+
+        /**
+         * Get the user data
+         * 
+         * @return user data
+         */
+        void *get_user_data() const noexcept {
+            return ::riat_instance_get_user_data(this->instance.get());
         }
 
         Instance(RIAT_CompileTarget compile_target) : instance(::riat_instance_new(compile_target), ::riat_instance_delete) {

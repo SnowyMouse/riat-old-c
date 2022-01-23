@@ -12,6 +12,9 @@ extern "C" {
 /** Opaque instance pointer */
 typedef struct RIAT_Instance RIAT_Instance;
 
+/** Warning callback */
+typedef void (*RIAT_InstanceWarnCallback)(RIAT_Instance *instance, const char *message, const char *file, size_t line, size_t column);
+
 /** Value type - value matches HCE's definitions */
 typedef enum RIAT_ValueType {
     /** Invalid */
@@ -221,7 +224,7 @@ struct RIAT_Instance *riat_instance_new(RIAT_CompileTarget target);
 /**
  * Clear the instance, freeing all memory associated with it. Passing NULL is a no-op.
  * 
- * @param instance instance to free
+ * @param instance
  */
 void riat_instance_delete(RIAT_Instance *instance);
 
@@ -242,7 +245,7 @@ typedef enum RIAT_CompileResult {
 /**
  * Load the script source data
  * 
- * @param instance             instance to compile the script with
+ * @param instance             instance
  * @param script_source_data   source data to compile
  * @param script_source_length length of the source data in columns
  * @param file_name            source file name (can be anything)
@@ -254,7 +257,7 @@ RIAT_CompileResult riat_instance_load_script_source(RIAT_Instance *instance, con
 /**
  * Compile the loaded script(s)
  * 
- * @param instance             instance to compile the script with
+ * @param instance             instance
  * 
  * @return                     result
  */
@@ -263,7 +266,7 @@ RIAT_CompileResult riat_instance_compile_scripts(RIAT_Instance *instance);
 /**
  * Get the last compile error
  * 
- * @param instance  instance to check
+ * @param instance  instance
  * @param line      set to the line where the error occurred (if applicable)
  * @param column    set to the column where the error occurred (if applicable)
  * @param file      set to the file where the error occurred (if applicable - will be invalid if any more riat_instance_* functions that return a RIAT_CompileResult are called on the instance)
@@ -273,7 +276,7 @@ const char *riat_instance_get_last_compile_error(const RIAT_Instance *instance, 
 /**
  * Get a pointer to the nodes
  * 
- * @param instance instance to get nodes
+ * @param instance instance
  * @param count    number of nodes (output)
  * 
  * @return         pointer to node array (will be invalid if scripts are recompiled or the instance is deleted)
@@ -283,7 +286,7 @@ const RIAT_Node *riat_instance_get_nodes(const RIAT_Instance *instance, size_t *
 /**
  * Get a pointer to the scripts
  * 
- * @param instance instance to get scripts
+ * @param instance instance
  * @param count    number of scripts (output)
  * 
  * @return         pointer to script array (will be invalid if scripts are recompiled or the instance is deleted)
@@ -293,12 +296,37 @@ const RIAT_Script *riat_instance_get_scripts(const RIAT_Instance *instance, size
 /**
  * Get a pointer to the globals
  * 
- * @param instance instance to get nodes
+ * @param instance instance
  * @param count    number of globals (output)
  * 
  * @return         pointer to global array (will be invalid if scripts are recompiled or the instance is deleted)
  */
 const RIAT_Global *riat_instance_get_globals(const RIAT_Instance *instance, size_t *count);
+
+/**
+ * Set the user data
+ * 
+ * @param instance  instance
+ * @param user_data user data to set
+ */
+void riat_instance_set_user_data(RIAT_Instance *instance, void *user_data);
+
+/**
+ * Get the user data
+ * 
+ * @param instance  instance
+ * 
+ * @return          user data
+ */
+void *riat_instance_get_user_data(const RIAT_Instance *instance);
+
+/**
+ * Set the warning callback
+ * 
+ * @param instance instance
+ * @param callback callback
+ */
+void riat_instance_set_warn_callback(RIAT_Instance *instance, RIAT_InstanceWarnCallback callback);
 
 #ifdef __cplusplus
 }
