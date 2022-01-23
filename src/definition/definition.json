@@ -448,7 +448,7 @@
             "description": "wakes a sleeping script in the next update.",
             "parameters": [
                 {
-                    "type": "string"
+                    "type": "script"
                 }
             ],
             "engines": {

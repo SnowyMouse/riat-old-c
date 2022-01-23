@@ -168,9 +168,20 @@ static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_
                 free(n->string_data);
                 n->string_data = NULL;
                 break;
+            case RIAT_VALUE_TYPE_SCRIPT:
+                for(size_t s = 0; s < script_globals->script_count; s++) {
+                    if(strcmp(n->string_data, script_globals->scripts[s].name) == 0) {
+                        n->short_int = (int16_t)(s);
+                        goto end;
+                    }
+                }
+                snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "expected a script name; got '%s' instead", n->string_data);
+                SYNTAX_ERROR_INSTANCE(instance, n->line, n->column, n->file);
+                return RIAT_COMPILE_SYNTAX_ERROR;
             default:
                 break;
         }
+        end:
         n->type = preferred_type;
     }
     else {
