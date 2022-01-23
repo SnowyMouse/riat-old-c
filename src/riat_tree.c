@@ -170,19 +170,10 @@ static bool resolve_node_to_function_call(ScriptGlobalLookup *lookup, RIAT_NodeA
     if(get_function(lookup, function_name_node->string_data, script_globals, target)) {
         lowercase_string(function_name_node->string_data);
 
-        /* Make sure the function name is set properly */
+        /* Make sure these  fields are set properly */
         function_name_node->type = RIAT_VALUE_TYPE_FUNCTION_NAME;
-        calling_node->is_script_call = lookup->is_definition;
         calling_node->type = lookup->value_type;
-
-        /* If it's a definition, set it as such. Otherwise, set the script call correctly. */
-        if(lookup->is_definition) {
-            calling_node->is_script_call = false;
-        }
-        else {
-            calling_node->is_script_call = true;
-            calling_node->call_index = lookup->script_local - script_globals->scripts;
-        }
+        calling_node->is_script_call = !lookup->is_definition;
 
         return true;
     }
@@ -737,6 +728,16 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
         goto end;
     }
 
+    #ifndef NDEBUG
+    /* Nothing should be unparsed */
+    for(size_t n = 0; n < node_array.nodes_count; n++) {
+        if(node_array.nodes[n].type == RIAT_VALUE_TYPE_UNPARSED) {
+            fprintf(stderr, "Node#%zu is unparsed. This is very, very bad.\n", n);
+            abort();
+        }
+    }
+    #endif
+
     /* Resolve stubbed functions */
     for(size_t s = 0; s < script_global_list.script_count; s++) {
         bool should_remove = false;
@@ -752,10 +753,10 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
                 /* It's a match! */
                 if(strcmp(script_other->name, script->name) == 0) {
                     if(script_other->script_type != RIAT_SCRIPT_TYPE_STATIC) {
-                        COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script->file, script->line, script->column, "cannot replace stub script '%s' with non-static script '%s'", script->name, script_other->name);
+                        COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script_other->file, script_other->line, script_other->column, "cannot replace stub script '%s' with non-static script '%s'", script->name, script_other->name);
                     }
                     else if(script_other->return_type != script->return_type) {
-                        COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script->file, script->line, script->column, "cannot replace stub script '%s' (returns %s) with script '%s' (returns %s)", script->name, riat_value_type_to_string(script->return_type), script_other->name, riat_value_type_to_string(script_other->return_type));
+                        COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script_other->file, script_other->line, script_other->column, "cannot replace stub script '%s' (returns %s) with script '%s' (returns %s)", script->name, riat_value_type_to_string(script->return_type), script_other->name, riat_value_type_to_string(script_other->return_type));
                     }
 
                     should_remove = true;
@@ -778,15 +779,45 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
         }
     }
 
-    #ifndef NDEBUG
-    /* Nothing should be unparsed */
+    /* Set script call node indices */
     for(size_t n = 0; n < node_array.nodes_count; n++) {
-        if(node_array.nodes[n].type == RIAT_VALUE_TYPE_UNPARSED) {
-            fprintf(stderr, "Node#%zu is unparsed. This is very, very bad.\n", n);
-            abort();
+        RIAT_Node *node = &node_array.nodes[n];
+        if(node->is_script_call) {
+            assert(node->child_node < node_array.nodes_count);
+            RIAT_Node *function_name = &node_array.nodes[node->child_node];
+            assert(function_name->string_data != NULL && function_name->type == RIAT_VALUE_TYPE_FUNCTION_NAME);
+
+            bool found_node = false;
+            for(size_t s = 0; s < script_global_list.script_count && !found_node; s++) {
+                if(strcmp(function_name->string_data, script_global_list.scripts[s].name) == 0) {
+                    node->call_index = n;
+                    found_node = true;
+                }
+            }
+
+            assert(found_node);
         }
     }
-    #endif
+
+    /* Ensure scripts/globals do not have name collisions, since now that any removable stubs are gone, they should be unique */
+    for(size_t s = 0; s < script_global_list.script_count; s++) {
+        RIAT_Script *script = &script_global_list.scripts[s];
+        for(size_t t = s + 1; t < script_global_list.script_count; t++) {
+            RIAT_Script *script_other = &script_global_list.scripts[t];
+            if(strcmp(script->name, script_other->name) == 0) {
+                COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script_other->file, script_other->line, script_other->column, "multiple scripts of the name '%s' exist", script->name);
+            }
+        }
+    }
+    for(size_t g = 0; g < script_global_list.global_count; g++) {
+        RIAT_Global *global = &script_global_list.globals[g];
+        for(size_t h = g + 1; h < script_global_list.global_count; h++) {
+            RIAT_Global *global_other = &script_global_list.globals[h];
+            if(strcmp(global->name, global_other->name) == 0) {
+                COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, global_other->file, global_other->line, global_other->column, "multiple globals of the name '%s' exist", global->name);
+            }
+        }
+    }
 
     /* Clear the old results */
     riat_clear_node_array_container(&instance->last_compile_result.nodes);
