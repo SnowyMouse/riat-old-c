@@ -613,6 +613,9 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
             if(global_name_token->parenthesis != 0) {
                 COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, global_type_token->file, global_name_token->line, global_name_token->column, "expected global name, got '%s'", global_name_token->token_string);
             }
+            if(strlen(global_name_token->token_string) > sizeof(relevant_global->name) - 1) {
+                COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, global_type_token->file, global_name_token->line, global_name_token->column, "global name '%s' is too long", global_name_token->token_string);
+            }
             strncpy(relevant_global->name, global_name_token->token_string, sizeof(relevant_global->name) - 1);
 
             size_t init_node;
@@ -661,6 +664,9 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
             RIAT_Token *script_name_token = &tokens[ti++];
             if(script_name_token->parenthesis != 0) {
                 COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script_type_token->file, script_name_token->line, script_name_token->column, "expected script name, got '%s'", script_name_token->token_string);
+            }
+            if(strlen(script_name_token->token_string) > sizeof(relevant_script->name) - 1) {
+                COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script_name_token->file, script_name_token->line, script_name_token->column, "script name '%s' is too long", script_name_token->token_string);
             }
             strncpy(relevant_script->name, script_name_token->token_string, sizeof(relevant_script->name) - 1);
 
