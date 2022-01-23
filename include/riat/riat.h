@@ -44,7 +44,9 @@ typedef enum RIAT_ValueType {
     /** String */
     RIAT_VALUE_TYPE_STRING,
 
+    /* Script - value must be the script index (value is 16-bit) */
     RIAT_VALUE_TYPE_SCRIPT,
+
     RIAT_VALUE_TYPE_TRIGGER_VOLUME,
     RIAT_VALUE_TYPE_CUTSCENE_FLAG,
     RIAT_VALUE_TYPE_CUTSCENE_CAMERA_POINT,
@@ -137,7 +139,7 @@ typedef struct RIAT_Node {
         /** 32-bit integer (if primitive long) */
         int32_t long_int;
 
-        /** 16-bit integer (if primitive short) */
+        /** 16-bit integer (if primitive short or script) */
         int16_t short_int;
 
         /** 8-bit integer (if primitive boolean) */

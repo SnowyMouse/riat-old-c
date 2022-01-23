@@ -104,6 +104,7 @@ static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_
         if(global_maybe) {
             n->type = *global_maybe;
             CONVERT_TYPE_OR_DIE(preferred_type, n->type, n->line, n->column, n->file);
+            n->is_global = true;
             return RIAT_COMPILE_OK;
         }
 
@@ -314,6 +315,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
                         return RIAT_COMPILE_SYNTAX_ERROR;
                     }
                     n->type = *global_maybe;
+                    global_name_node->is_global = true;
                     global_name_node->type = *global_maybe;
                     
                     /* Try it */
@@ -332,6 +334,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
                     /* If one is a global... */
                     if(g0 != NULL && g1 == NULL) {
                         n0->type = *g0;
+                        n0->is_global = true;
                         RIAT_CompileResult result = resolve_type_of_element(instance, nodes, e1, n0->type, script_globals);
                         if(result != RIAT_COMPILE_OK) {
                             return result;
@@ -340,10 +343,31 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
 
                     else if(g1 != NULL && g0 == NULL) {
                         n1->type = *g1;
+                        n1->is_global = true;
                         RIAT_CompileResult result = resolve_type_of_element(instance, nodes, e0, n1->type, script_globals);
                         if(result != RIAT_COMPILE_OK) {
                             return result;
                         }
+                    }
+
+                    /* Both globals? */
+                    else if(g1 != NULL & g0 != NULL) {
+                        n0->type = *g0;
+                        n0->is_global = true;
+                        n1->type = *g1;
+                        n1->is_global = true;
+
+                        if(n0->type != n1->type) {
+                            snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "%s requires both arguments to be the same type, but '%s' is a type %s and '%s' is a type %s",
+                                                                                                                                                           function_name, 
+                                                                                                                                                           n0->string_data,
+                                                                                                                                                           riat_value_type_to_string(n0->type),
+                                                                                                                                                           n1->string_data, 
+                                                                                                                                                           riat_value_type_to_string(n1->type));
+                            SYNTAX_ERROR_INSTANCE(instance, n0->line, n0->column, n0->file);
+                        }
+
+                        return RIAT_COMPILE_OK;
                     }
 
                     /* If they are both not globals, try to see if one is a block? Otherwise, test them as reals. */
