@@ -16,6 +16,7 @@ int main(int argc, const char **argv) {
     RIAT::Instance instance;
 
     instance.set_warn_callback(warn);
+    instance.set_optimization_level(RIAT_OptimizationLevel::RIAT_OPTIMIZATION_PREVENT_GENERATIONAL_LOSS);
 
     try {
         // Go through each script file, read it from memory, and load it

@@ -151,7 +151,7 @@ static void recursively_disable_node(RIAT_NodeArrayContainer *nodes, size_t firs
         } \
         else { \
             SYNTAX_ERROR_INSTANCE(instance, line, column, file); \
-            snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "%i expected a %s, but %s cannot be converted into one", __LINE__, riat_value_type_to_string(preferred_type), riat_value_type_to_string(actual_type)); \
+            snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "expected a %s, but %s cannot be converted into one", riat_value_type_to_string(preferred_type), riat_value_type_to_string(actual_type)); \
             return RIAT_COMPILE_SYNTAX_ERROR; \
         } \
     }
@@ -414,6 +414,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
 
         snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "no such function or script '%s' was defined%s", function_name, suffix);
         SYNTAX_ERROR_INSTANCE(instance, function_name_node->line, function_name_node->column, function_name_node->file);
+        return RIAT_COMPILE_SYNTAX_ERROR;
     }
 
     if(lookup.is_definition) {
