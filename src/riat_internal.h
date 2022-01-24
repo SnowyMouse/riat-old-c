@@ -60,6 +60,9 @@ typedef struct RIAT_Instance {
     /* Compile target */
     RIAT_CompileTarget compile_target;
 
+    /* Optimization level */
+    RIAT_OptimizationLevel optimization_level;
+
     /* User data */
     void *user_data;
 

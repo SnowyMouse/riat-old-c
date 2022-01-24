@@ -191,3 +191,7 @@ void riat_instance_set_user_data(RIAT_Instance *instance, void *user_data) {
 void *riat_instance_get_user_data(const RIAT_Instance *instance) {
     return instance->user_data;
 }
+
+void riat_instance_set_optimization_level(RIAT_Instance *instance, RIAT_OptimizationLevel level) {
+    instance->optimization_level = level;
+}

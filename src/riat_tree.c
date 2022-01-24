@@ -183,6 +183,20 @@ static void lowercase_string(char *s) {
     }
 }
 
+static void debug_verify_no_unparsed(const RIAT_NodeArrayContainer *nodes, size_t node_to_check) {
+    #ifndef NDEBUG
+    RIAT_Node *n = &nodes->nodes[node_to_check];
+    assert(n->type != RIAT_VALUE_TYPE_UNPARSED);
+
+    if(n->next_node != NEXT_NODE_NULL) {
+        debug_verify_no_unparsed(nodes, n->next_node);
+    }
+    if(!n->is_primitive) {
+        debug_verify_no_unparsed(nodes, n->child_node);
+    }
+    #endif
+}
+
 static bool get_global(ScriptGlobalLookup *output, const char *name, const RIAT_ScriptGlobalArrayContainer *script_globals, RIAT_CompileTarget target) {
     /* Search local */
     for(size_t g = 0; g < script_globals->global_count; g++) {
@@ -777,23 +791,51 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
             strncpy(relevant_script->name, script_name_token->token_string, sizeof(relevant_script->name) - 1);
             lowercase_string(relevant_script->name);
 
-            size_t root_node;
-            result = read_block(instance, tokens, &ti, &node_array, &script_global_list, &root_node, true);
+            /* First get the root node */
+            size_t root_node_index;
+            result = read_block(instance, tokens, &ti, &node_array, &script_global_list, &root_node_index, true);
             if(result != RIAT_COMPILE_OK) {
                 goto end;
             }
 
-            /* Implicitly add a begin block */
-            size_t original_first_node_index = node_array.nodes[root_node].child_node;
-            size_t begin_name = append_node_to_node_array(&node_array, "begin");
-            if(begin_name == APPEND_NODE_ALLOCATION_ERROR) {
-                result = RIAT_COMPILE_ALLOCATION_ERROR;
-                goto end;
+            bool add_begin_block = true;
+
+            /* If we're optimizing, we shouldn't add a begin block if the root node already has a begin block (or if we're more aggressive about it, at all if possible?) */
+            if(instance->optimization_level >= RIAT_OPTIMIZATION_PREVENT_GENERATIONAL_LOSS) {
+                /* Get the first node in the block */
+                RIAT_Node *root_node = &node_array.nodes[root_node_index];
+                size_t child_node_index = root_node->child_node;
+                RIAT_Node *child_node = &node_array.nodes[child_node_index];
+
+                /* If the child node is a function call and has no "next_node", let's proceed */
+                if(child_node->next_node == NEXT_NODE_NULL && !child_node->is_primitive) {
+                    size_t function_name_index = child_node->child_node;
+                    assert(node_array.nodes_count > function_name_index);
+                    RIAT_Node *function_name = &node_array.nodes[function_name_index];
+
+                    /* If optimizing, we can remove it if it's a begin block or, if optimization level is 2 or greater, always remove it */
+                    if(strcmp(function_name->string_data, "begin") == 0 || instance->optimization_level >= RIAT_OPTIMIZATION_DEDUPE_EXTRA) {
+                        add_begin_block = false;
+                        root_node->type = RIAT_VALUE_TYPE_UNPARSED; /* marking it as unparsed to remove it later */
+                        root_node_index = child_node_index;
+                    }
+                }
             }
-            node_array.nodes[begin_name].is_primitive = true;
-            node_array.nodes[begin_name].next_node = original_first_node_index;
-            node_array.nodes[root_node].child_node = begin_name;
-            relevant_script->first_node = root_node;
+
+            /* Implicitly add a begin block if we need to */
+            if(add_begin_block) {
+                size_t original_first_node_index = node_array.nodes[root_node_index].child_node;
+                size_t begin_name = append_node_to_node_array(&node_array, "begin");
+                if(begin_name == APPEND_NODE_ALLOCATION_ERROR) {
+                    result = RIAT_COMPILE_ALLOCATION_ERROR;
+                    goto end;
+                }
+                node_array.nodes[begin_name].is_primitive = true;
+                node_array.nodes[begin_name].next_node = original_first_node_index;
+                node_array.nodes[root_node_index].child_node = begin_name;
+            }
+            
+            relevant_script->first_node = root_node_index;
             relevant_script->line = block_type_token->line;
             relevant_script->column = block_type_token->column;
             relevant_script->file = block_type_token->file;
@@ -815,18 +857,18 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
         goto end;
     }
 
-    #ifndef NDEBUG
+    /* Verify no script or global tree has an unparsed node somewhere */
     #define VERIFY_NO_UNPARSED \
-    /* Nothing should be unparsed */ \
-    for(size_t n = 0; n < node_array.nodes_count; n++) { \
-        if(node_array.nodes[n].type == RIAT_VALUE_TYPE_UNPARSED) { \
-            fprintf(stderr, "%zu: Node#%zu is unparsed. This is very, very bad.\n", (size_t)(__LINE__), n); \
-            abort(); \
+    if(node_array.nodes_count > 0) { \
+        for(size_t g = 0; g < script_global_list.global_count && result == RIAT_COMPILE_OK; g++) { \
+            RIAT_Global *global = &script_global_list.globals[g]; \
+            debug_verify_no_unparsed(&node_array, global->first_node); \
+        } \
+        for(size_t s = 0; s < script_global_list.script_count && result == RIAT_COMPILE_OK; s++) { \
+            RIAT_Script *script = &script_global_list.scripts[s]; \
+            debug_verify_no_unparsed(&node_array, script->first_node); \
         } \
     }
-    #else
-    #define VERIFY_NO_UNPARSED (void)(0);
-    #endif
 
     VERIFY_NO_UNPARSED
 

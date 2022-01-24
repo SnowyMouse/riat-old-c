@@ -15,6 +15,37 @@ typedef struct RIAT_Instance RIAT_Instance;
 /** Warning callback */
 typedef void (*RIAT_InstanceWarnCallback)(RIAT_Instance *instance, const char *message, const char *file, size_t line, size_t column);
 
+/** Optimization level */
+typedef enum RIAT_OptimizationLevel {
+    /**
+     * No optimizations are done besides string data deduplication.
+     * 
+     * This will match tool.exe output and, with a smart decompiler, decompile to the same code.
+     * */
+    RIAT_OPTIMIZATION_PARANOID = 0,
+
+    /**
+     * Do not add a (begin) block to top-level script blocks if one already isn't present, preventing generational loss from tag extraction.
+     * 
+     * This will match tool.exe output (and decompile to the same code) provided there are no top-level begin blocks in the source code.
+     */ 
+    RIAT_OPTIMIZATION_PREVENT_GENERATIONAL_LOSS = 1,
+
+    /**
+     * Dedupe constants and function calls, and do not add unnecessary top-level begin blocks, saving nodes.
+     * 
+     * With the exception of *potentially* not adding a top-level begin block, this will be functionally equivalent to tool.exe output.
+     */
+    RIAT_OPTIMIZATION_DEDUPE_EXTRA = 2,
+
+    /**
+     * Evaluate constant arithmetic and perform more aggressive deduplication, saving more nodes.
+     * 
+     * Functionally, this will behave the same as tool.exe output, but it may be harder to debug with the console, and it will possibly not decompile to the same code.
+     */
+    RIAT_OPTIMIZATION_AGGRESSIVE = 3
+} RIAT_OptimizationLevel;
+
 /** Value type - value matches HCE's definitions */
 typedef enum RIAT_ValueType {
     /** Invalid */
@@ -327,6 +358,14 @@ void *riat_instance_get_user_data(const RIAT_Instance *instance);
  * @param callback callback
  */
 void riat_instance_set_warn_callback(RIAT_Instance *instance, RIAT_InstanceWarnCallback callback);
+
+/**
+ * Set the optimization level
+ * 
+ * @param instance instance
+ * @param level    optimization level
+ */
+void riat_instance_set_optimization_level(RIAT_Instance *instance, RIAT_OptimizationLevel level);
 
 #ifdef __cplusplus
 }

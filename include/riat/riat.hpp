@@ -135,12 +135,12 @@ namespace RIAT {
         }
 
         /**
-         * Get the instance handle
+         * Set the optimization level
          * 
-         * @return instance
+         * @param level optimization level
          */
-        RIAT_Instance *get_instance() noexcept {
-            return this->instance.get();
+        void set_optimization_level(RIAT_OptimizationLevel level) noexcept {
+            ::riat_instance_set_optimization_level(this->get_instance(), level);
         }
 
         /**
@@ -159,6 +159,15 @@ namespace RIAT {
          */
         void *get_user_data() const noexcept {
             return ::riat_instance_get_user_data(this->instance.get());
+        }
+
+        /**
+         * Get the instance handle
+         * 
+         * @return instance
+         */
+        RIAT_Instance *get_instance() noexcept {
+            return this->instance.get();
         }
 
         Instance(RIAT_CompileTarget compile_target) : instance(::riat_instance_new(compile_target), ::riat_instance_delete) {
