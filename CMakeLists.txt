@@ -33,3 +33,4 @@ if(RIAT_BUILD_EXAMPLES)
     target_link_libraries(riat-validator-cpp riat)
 endif()
 
+option(BUILD_SHARED_LIBS "Build with shared libs" OFF)
