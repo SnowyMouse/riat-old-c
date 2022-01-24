@@ -30,7 +30,7 @@ for n in everything:
         return "RIAT_VALUE_TYPE_" + v.upper()
 
     def format_parameters(w):
-        r = ""
+        r = ",.parameters={"
         for p in w:
             r = r + "{{.type={type},.optional={optional},.many={many},.passthrough_last={passthrough_last}}},".format(
                 type=format_value_type(p["type"]),
@@ -38,9 +38,9 @@ for n in everything:
                 many="true" if "many" in p and p["many"] else "false",
                 passthrough_last="true" if "passthrough_last" in p and p["passthrough_last"] else "false"
             )
-        return r
+        return r + "}"
 
-    output_defs += "{{.name=\"{name}\",.type={type},.value_type={value_type},.index_gbx_custom={index_gbx_custom},.index_gbx_demo={index_gbx_demo},.index_gbx_retail={index_gbx_retail},.index_mcc_cea={index_mcc_cea},.index_xbox={index_xbox},.parameter_count={parameter_count},.parameters={{{parameters}}}}},\n".format(
+    output_defs += "{{.name=\"{name}\",.type={type},.value_type={value_type},.index_gbx_custom={index_gbx_custom},.index_gbx_demo={index_gbx_demo},.index_gbx_retail={index_gbx_retail},.index_mcc_cea={index_mcc_cea},.index_xbox={index_xbox},.parameter_count={parameter_count}{parameters}}},\n".format(
         name=n["name"],
         type="RIAT_BUILTIN_DEFINITION_TYPE_FUNCTION" if is_function else "RIAT_BUILTIN_DEFINITION_TYPE_GLOBAL",
         value_type=format_value_type(n["type"]),

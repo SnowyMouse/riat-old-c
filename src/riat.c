@@ -30,6 +30,8 @@ const char *riat_instance_get_last_compile_error(const RIAT_Instance *instance, 
         case RIAT_COMPILE_ALLOCATION_ERROR:
             return "allocation error";
     }
+
+    UNREACHABLE();
 }
 
 #define COMPILE_RETURN_ERROR(what) \

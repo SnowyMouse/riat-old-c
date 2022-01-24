@@ -247,6 +247,7 @@ const char *riat_value_type_to_string(RIAT_ValueType type) {
         case RIAT_VALUE_TYPE_SCENERY_NAME:
             return "scenery_name";
     }
+    UNREACHABLE();
 }
 
 RIAT_ScriptType riat_script_type_from_string(const char *type, bool *error) {

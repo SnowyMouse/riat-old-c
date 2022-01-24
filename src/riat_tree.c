@@ -266,7 +266,6 @@ static bool resolve_node_to_function_call(ScriptGlobalLookup *lookup, RIAT_NodeA
 
 static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_NodeArrayContainer *nodes, size_t node, RIAT_ValueType preferred_type, const RIAT_ScriptGlobalArrayContainer *script_globals) {
     RIAT_Node *n = &nodes->nodes[node];
-    bool numeric_preferred = preferred_type == RIAT_VALUE_TYPE_REAL || preferred_type == RIAT_VALUE_TYPE_LONG || preferred_type == RIAT_VALUE_TYPE_SHORT;
     bool should_lowercase = true;
 
     if(n->is_primitive) {
@@ -382,10 +381,6 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
 
     size_t max_arguments = 0;
 
-    /* Erroring? */
-    bool local_global_exists = false;
-    bool definition_global_exists = false;
-
     /* Lookup the thing */
     ScriptGlobalLookup lookup;
     if(!resolve_node_to_function_call(&lookup, nodes, node, script_globals, instance->compile_target)) {
@@ -425,7 +420,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
             assert(max_arguments == 2); /* duh */
 
             /* Get all of the parameters */
-            size_t parameter_elements[2] = {};
+            size_t parameter_elements[2];
             size_t element = function_name_node->next_node;
             for(argument_index = 0; argument_index < 2; argument_index++) {
                 /* Not enough arguments? */
@@ -491,7 +486,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
                     }
 
                     /* Both globals? */
-                    else if(g1 != NULL & g0 != NULL) {
+                    else if(g1 != NULL && g0 != NULL) {
                         if(n0->type != n1->type) {
                             snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "%s requires both arguments to be the same type, but '%s' is a type %s and '%s' is a type %s",
                                                                                                                                                            function_name, 
@@ -622,12 +617,15 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
     RIAT_Token *tokens = instance->tokens.tokens;
     size_t token_count = instance->tokens.token_count;
 
-    RIAT_ScriptGlobalArrayContainer script_global_list = {};
+    RIAT_ScriptGlobalArrayContainer script_global_list;
+    memset(&script_global_list, 0, sizeof(script_global_list));
     size_t script_process_count = 0;
     size_t global_process_count = 0;
 
-    RIAT_NodeArrayContainer node_array = {};
-    size_t node_count = 0;
+    RIAT_NodeArrayContainer node_array;
+    node_array.nodes = NULL;
+    node_array.nodes_count = 0;
+    node_array.nodes_capacity = 0;
 
     /* Figure out how many scripts/globals we have. This saves allocations and verifies that all top-level nodes are scripts or globals. */
     long depth = 0;
@@ -671,12 +669,12 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
     /* Allocate that many now */
     if(script_global_list.script_count > 0) {
         if((script_global_list.scripts = calloc(sizeof(*script_global_list.scripts), script_global_list.script_count)) == NULL) {
-            COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR, 0, 0, 0, NULL, NULL);
+            COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR, 0, 0, 0, "%i", 0);
         }
     }
     if(script_global_list.global_count > 0) {
         if((script_global_list.globals = calloc(sizeof(*script_global_list.globals), script_global_list.global_count)) == NULL) {
-            COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR, 0, 0, 0, NULL, NULL);
+            COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR, 0, 0, 0, "%i", 0);
         }
     }
 
@@ -977,8 +975,6 @@ static RIAT_CompileResult read_block(
         size_t else_node_predecessor = APPEND_NODE_ALLOCATION_ERROR;
 
         while(current_token->parenthesis != -1) {
-            size_t new_if_node;
-
             /* Make sure it's a block */
             if(current_token->parenthesis != 1) {
                 strncpy(instance->last_compile_error.syntax_error_explanation, "cond requires blocks enclosed in parenthesis (<condition> <result>)", sizeof(instance->last_compile_error.syntax_error_explanation) - 1);
@@ -1021,7 +1017,6 @@ static RIAT_CompileResult read_block(
             if_fn_name_call_node->is_primitive = true;
 
             RIAT_Node *expression_node = &nodes->nodes[if_expression_node_index];
-            RIAT_Node *then_node = &nodes->nodes[then_expression_node_index];
 
             if_fn_call_node->child_node = if_fn_name_call_index;
             if_fn_name_call_node->next_node = if_expression_node_index;
