@@ -472,7 +472,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
                         g0 = &nodes->nodes[e0].type;
                     }
                     if(n1->is_primitive && resolve_node_to_global(nodes, e1, script_globals, instance->compile_target)) {
-                        g0 = &nodes->nodes[e0].type;
+                        g1 = &nodes->nodes[e1].type;
                     }
 
                     /* If one is a global... */
