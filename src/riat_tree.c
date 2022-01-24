@@ -80,6 +80,11 @@ static void remove_node(RIAT_NodeArrayContainer *nodes, size_t removing_node, co
 
 /* Delete all unparsed nodes */
 static void remove_disabled_nodes(RIAT_NodeArrayContainer *nodes, const RIAT_ScriptGlobalArrayContainer *script_globals) {
+    /* Nothing to remove...? */
+    if(nodes->nodes_count == 0) {
+        return;
+    }
+
     size_t n = nodes->nodes_count - 1;
     while(true) {
         if(nodes->nodes[n].type == RIAT_VALUE_TYPE_UNPARSED) {
