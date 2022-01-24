@@ -6,6 +6,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "riat_strdup.h"
+
 typedef struct TokenInfo {
     bool is_error;
     size_t line, column, length;
@@ -96,7 +98,7 @@ RIAT_CompileResult riat_tokenize(RIAT_Instance *instance, const char *script_sou
         }
 
         /* Copy it */
-        char *token_str = strndup(next_token_data, next_token_length);
+        char *token_str = riat_strndup(next_token_data, next_token_length);
 
         /* Allocate space for the token (as a string) so we can use it later */
         if(!token_str) {

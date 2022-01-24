@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "riat_strdup.h"
+
 static void default_warn_callback(RIAT_Instance *instance, const char *message, const char *file, size_t line, size_t column) {}
 
 RIAT_Instance *riat_instance_new(RIAT_CompileTarget compile_target) {
@@ -53,7 +55,7 @@ RIAT_CompileResult riat_instance_load_script_source(RIAT_Instance *instance, con
     }
 
     /* If that worked, we can append the file name now */
-    char *file_name_copy = strdup(file_name);
+    char *file_name_copy = riat_strdup(file_name);
     if(file_name_copy == NULL) {
         riat_token_free_array(tokens, token_count);
         COMPILE_RETURN_ERROR(RIAT_COMPILE_ALLOCATION_ERROR);

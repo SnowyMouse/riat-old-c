@@ -5,7 +5,9 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <assert.h>
+
 #include "definition/definition.h"
+#include "riat_strdup.h"
 
 #define APPEND_NODE_ALLOCATION_ERROR SIZE_MAX
 
@@ -1136,6 +1138,6 @@ static size_t append_node_to_node_array(RIAT_NodeArrayContainer *container, cons
     RIAT_Node *next_node = &container->nodes[next_node_index];
     memset(next_node, 0, sizeof(*next_node));
     next_node->next_node = NEXT_NODE_NULL;
-    next_node->string_data = string_data != NULL ? strdup(string_data) : NULL;
+    next_node->string_data = string_data != NULL ? riat_strdup(string_data) : NULL;
     return next_node_index;
 }
