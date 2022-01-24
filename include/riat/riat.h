@@ -246,11 +246,9 @@ typedef enum RIAT_CompileTarget {
 /**
  * Make an instance
  * 
- * @param  target compile target
- * 
  * @return        new instance pointer or NULL on failure
  */
-struct RIAT_Instance *riat_instance_new(RIAT_CompileTarget target);
+struct RIAT_Instance *riat_instance_new();
 
 /**
  * Clear the instance, freeing all memory associated with it. Passing NULL is a no-op.
@@ -366,6 +364,14 @@ void riat_instance_set_warn_callback(RIAT_Instance *instance, RIAT_InstanceWarnC
  * @param level    optimization level
  */
 void riat_instance_set_optimization_level(RIAT_Instance *instance, RIAT_OptimizationLevel level);
+
+/**
+ * Set the compile target
+ * 
+ * @param instance instance
+ * @param target   compilation target
+ */
+void riat_instance_set_compile_target(RIAT_Instance *instance, RIAT_CompileTarget target);
 
 #ifdef __cplusplus
 }

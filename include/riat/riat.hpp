@@ -144,6 +144,15 @@ namespace RIAT {
         }
 
         /**
+         * Set the compile target
+         * 
+         * @param target compile target
+         */
+        void set_compile_target(RIAT_CompileTarget target) noexcept {
+            ::riat_instance_set_compile_target(this->get_instance(), target);
+        }
+
+        /**
          * Set the user data
          * 
          * @param user_data user data
@@ -158,7 +167,7 @@ namespace RIAT {
          * @return user data
          */
         void *get_user_data() const noexcept {
-            return ::riat_instance_get_user_data(this->instance.get());
+            return ::riat_instance_get_user_data(this->get_instance());
         }
 
         /**
@@ -170,13 +179,11 @@ namespace RIAT {
             return this->instance.get();
         }
 
-        Instance(RIAT_CompileTarget compile_target) : instance(::riat_instance_new(compile_target), ::riat_instance_delete) {
+        Instance() : instance(::riat_instance_new(), ::riat_instance_delete) {
             if(this->instance.get() == nullptr) {
                 throw AllocationException();
             }
         }
-
-        Instance() : Instance(RIAT_CompileTarget::RIAT_COMPILE_TARGET_ANY) {}
     private:
         std::unique_ptr<RIAT_Instance, void(*)(RIAT_Instance*)> instance;
 

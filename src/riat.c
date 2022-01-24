@@ -9,14 +9,17 @@
 
 static void default_warn_callback(RIAT_Instance *instance, const char *message, const char *file, size_t line, size_t column) {}
 
-RIAT_Instance *riat_instance_new(RIAT_CompileTarget compile_target) {
+RIAT_Instance *riat_instance_new() {
     RIAT_Instance *instance = calloc(sizeof(*instance), 1);
+
+    instance->optimization_level = RIAT_OPTIMIZATION_PARANOID;
+    instance->compile_target = RIAT_COMPILE_TARGET_ANY;
+
     riat_instance_set_warn_callback(instance, default_warn_callback);
     if(!instance) {
         return NULL;
     }
 
-    instance->compile_target = compile_target;
     return instance;
 }
 
@@ -194,4 +197,8 @@ void *riat_instance_get_user_data(const RIAT_Instance *instance) {
 
 void riat_instance_set_optimization_level(RIAT_Instance *instance, RIAT_OptimizationLevel level) {
     instance->optimization_level = level;
+}
+
+void riat_instance_set_compile_target(RIAT_Instance *instance, RIAT_CompileTarget target) {
+    instance->compile_target = target;
 }
