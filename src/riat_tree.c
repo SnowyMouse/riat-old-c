@@ -32,6 +32,88 @@ static RIAT_CompileResult read_next_element(
 
 static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_NodeArrayContainer *nodes, size_t node, RIAT_ValueType preferred_type, const RIAT_ScriptGlobalArrayContainer *script_globals);
 
+/* Remove a single node */
+static void remove_node(RIAT_NodeArrayContainer *nodes, size_t removing_node, const RIAT_ScriptGlobalArrayContainer *script_globals) {
+    assert(nodes->nodes_count > removing_node);
+
+    /* If we aren't just removing a node from the end (which is free), we could swap the topmost node */
+    if(removing_node + 1 < nodes->nodes_count) {
+        size_t index_of_swapping_node = nodes->nodes_count - 1;
+        memcpy(&nodes->nodes[removing_node], &nodes->nodes[index_of_swapping_node], sizeof(nodes->nodes[removing_node]));
+
+        /* Have all indices point to the new node */
+        for(size_t n = 0; n < nodes->nodes_count - 1; n++) {
+            RIAT_Node *node = &nodes->nodes[n];
+
+            if(node->type == RIAT_VALUE_TYPE_UNPARSED) {
+                continue;
+            }
+
+            if(node->next_node != SIZE_MAX && node->next_node == index_of_swapping_node) {
+                node->next_node = removing_node;
+            }
+
+            if(!node->is_primitive && node->child_node == index_of_swapping_node) {
+                node->child_node = removing_node;
+            }
+        }
+
+        for(size_t s = 0; s < script_globals->script_count; s++) {
+            RIAT_Script *script = &script_globals->scripts[s];
+            if(script->first_node == index_of_swapping_node) {
+                script->first_node = removing_node;
+            }
+        }
+
+        for(size_t g = 0; g < script_globals->global_count; g++) {
+            RIAT_Global *global = &script_globals->globals[g];
+            if(global->first_node == index_of_swapping_node) {
+                global->first_node = removing_node;
+            }
+        }
+    }
+
+    nodes->nodes_count--;
+}
+
+/* Delete all unparsed nodes */
+static void remove_disabled_nodes(RIAT_NodeArrayContainer *nodes, const RIAT_ScriptGlobalArrayContainer *script_globals) {
+    size_t n = nodes->nodes_count - 1;
+    while(true) {
+        if(nodes->nodes[n].type == RIAT_VALUE_TYPE_UNPARSED) {
+            remove_node(nodes, n, script_globals);
+        }
+
+        if(n == 0) {
+            break;
+        }
+        n--;
+    }
+}
+
+/* Recursively mark node and all of its descendents as unparsed */
+static void recursively_disable_node(RIAT_NodeArrayContainer *nodes, size_t first_node) {
+    assert(nodes->nodes_count > first_node);
+
+    RIAT_Node *node = &nodes->nodes[first_node];
+
+    /* Already disabled - we can stop here */
+    if(node->type == RIAT_VALUE_TYPE_UNPARSED) {
+        return;
+    }
+
+    /* Mark as unparsed (to be removed later) */
+    node->type = RIAT_VALUE_TYPE_UNPARSED;
+
+    /* Delete any following nodes */
+    if(!node->is_primitive) {
+        recursively_disable_node(nodes, node->child_node);
+    }
+    if(node->next_node != SIZE_MAX) {
+        recursively_disable_node(nodes, node->next_node);
+    }
+}
+
 #define SYNTAX_ERROR_INSTANCE(instance, line, column, file) \
     instance->last_compile_error.syntax_error_file = file; \
     instance->last_compile_error.syntax_error_line = line; \
@@ -729,14 +811,19 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
     }
 
     #ifndef NDEBUG
-    /* Nothing should be unparsed */
-    for(size_t n = 0; n < node_array.nodes_count; n++) {
-        if(node_array.nodes[n].type == RIAT_VALUE_TYPE_UNPARSED) {
-            fprintf(stderr, "Node#%zu is unparsed. This is very, very bad.\n", n);
-            abort();
-        }
+    #define VERIFY_NO_UNPARSED \
+    /* Nothing should be unparsed */ \
+    for(size_t n = 0; n < node_array.nodes_count; n++) { \
+        if(node_array.nodes[n].type == RIAT_VALUE_TYPE_UNPARSED) { \
+            fprintf(stderr, "%zu: Node#%zu is unparsed. This is very, very bad.\n", (size_t)(__LINE__), n); \
+            abort(); \
+        } \
     }
+    #else
+    #define VERIFY_NO_UNPARSED (void)(0);
     #endif
+
+    VERIFY_NO_UNPARSED
 
     /* Resolve stubbed functions */
     for(size_t s = 0; s < script_global_list.script_count; s++) {
@@ -767,6 +854,8 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
 
         /* Delete the script */
         if(should_remove) {
+            recursively_disable_node(&node_array, script->first_node);
+
             script_global_list.script_count--;
 
             for(size_t t = s; t < script_global_list.script_count; t++) {
@@ -778,6 +867,10 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
             s--;
         }
     }
+
+    /* Remove deleted nodes */
+    remove_disabled_nodes(&node_array, &script_global_list);
+    VERIFY_NO_UNPARSED
 
     /* Set script call node indices */
     for(size_t n = 0; n < node_array.nodes_count; n++) {
