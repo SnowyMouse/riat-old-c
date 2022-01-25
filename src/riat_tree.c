@@ -135,6 +135,8 @@ static void recursively_disable_node(RIAT_NodeArrayContainer *nodes, size_t firs
 #define CONVERT_TYPE_OR_DIE(preferred_type, actual_type, line, column, file) \
     if(preferred_type != actual_type) { \
         if( \
+            /* Passthrough is always OK */ \
+            (preferred_type == RIAT_VALUE_TYPE_PASSTHROUGH) || \
             /* Converting between real and int is OK */ \
             (preferred_type == RIAT_VALUE_TYPE_REAL && (actual_type == RIAT_VALUE_TYPE_LONG || actual_type == RIAT_VALUE_TYPE_SHORT)) || \
             (actual_type == RIAT_VALUE_TYPE_REAL && (preferred_type == RIAT_VALUE_TYPE_LONG || preferred_type == RIAT_VALUE_TYPE_SHORT)) || \
@@ -369,9 +371,12 @@ static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_
 
             case RIAT_VALUE_TYPE_STRING:
                 should_lowercase = false;
+                break;
+
+            case RIAT_VALUE_TYPE_PASSTHROUGH:
+                RESOLVE_TYPE_OF_ELEMENT_FAIL("a passthrough type was expected; cannot determine type of '%s'", n->string_data);
 
             default:
-
                 break;
         }
         end:
@@ -578,8 +583,8 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
 
                 RIAT_ValueType this_element_preferred_type = parameter->type;
 
-                /* If the last element is passthrough, there is some special behavior here */
-                if(parameter->type == RIAT_VALUE_TYPE_PASSTHROUGH) {
+                /* If the last element is passthrough and the type changes, then there is some special behavior here */
+                if(parameter->type == RIAT_VALUE_TYPE_PASSTHROUGH && n->type == RIAT_VALUE_TYPE_PASSTHROUGH) {
                     /* If it's not the last type and we only passthrough the last, then it's void */
                     if(parameter->passthrough_last && element_node->next_node != NEXT_NODE_NULL) {
                         this_element_preferred_type = RIAT_VALUE_TYPE_VOID;
