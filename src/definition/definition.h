@@ -20,7 +20,7 @@ typedef struct RIAT_BuiltinFunctionParameter {
 } RIAT_BuiltinFunctionParameter;
 
 typedef struct RIAT_BuiltinDefinition {
-    char name[64];
+    const char *name;
     RIAT_BuiltinDefinitionType type;
     RIAT_ValueType value_type;
     
