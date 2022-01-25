@@ -552,6 +552,8 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
 
         /* Everything else... */
         else {
+            bool return_type_is_passthrough = n->type == RIAT_VALUE_TYPE_PASSTHROUGH;
+
             for(size_t element = function_name_node->next_node; element != NEXT_NODE_NULL; argument_index++) {
                 assert(element < nodes->nodes_count);
 
@@ -576,7 +578,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
                 RIAT_ValueType this_element_preferred_type = parameter->type;
 
                 /* If the last element is passthrough and the type changes, then there is some special behavior here */
-                if(parameter->type == RIAT_VALUE_TYPE_PASSTHROUGH && n->type == RIAT_VALUE_TYPE_PASSTHROUGH) {
+                if(parameter->type == RIAT_VALUE_TYPE_PASSTHROUGH && return_type_is_passthrough) {
                     /* If it's not the last type and we only passthrough the last, then it's void */
                     if(parameter->passthrough_last && element_node->next_node != NEXT_NODE_NULL) {
                         this_element_preferred_type = RIAT_VALUE_TYPE_VOID;
@@ -991,7 +993,7 @@ static RIAT_CompileResult read_block(
     RIAT_Token *current_token = &tokens[*ti];
 
     /* First, is this a cond block? If so... this is going to be interesting */
-    bool is_cond = !is_script_block && current_token->parenthesis == 0 && strcmp(current_token->token_string, "cond") == 0;
+    bool is_cond = !is_script_block && current_token->parenthesis == 0 && riat_case_insensitive_strcmp(current_token->token_string, "cond") == 0;
 
     /* Also, this should NOT be a left parenthesis unless it's the first thing in a script */
     if(!is_script_block && current_token->parenthesis == 1) {
@@ -1013,7 +1015,7 @@ static RIAT_CompileResult read_block(
         (*ti)++;
         RIAT_Token *current_token = &tokens[*ti];
         if(current_token->parenthesis == -1) {
-            strncpy(instance->last_compile_error.syntax_error_explanation, "cond requires at least one block enclosed in parenthesis (<condition> <result>)", sizeof(instance->last_compile_error.syntax_error_explanation) - 1);
+            strncpy(instance->last_compile_error.syntax_error_explanation, "cond requires at least one block enclosed in parenthesis (<condition> <result...>)", sizeof(instance->last_compile_error.syntax_error_explanation) - 1);
             SYNTAX_ERROR_INSTANCE(instance, current_token->line, current_token->column, current_token->file);
             return RIAT_COMPILE_SYNTAX_ERROR;
         }
@@ -1024,7 +1026,7 @@ static RIAT_CompileResult read_block(
         while(current_token->parenthesis != -1) {
             /* Make sure it's a block */
             if(current_token->parenthesis != 1) {
-                strncpy(instance->last_compile_error.syntax_error_explanation, "cond requires blocks enclosed in parenthesis (<condition> <result>)", sizeof(instance->last_compile_error.syntax_error_explanation) - 1);
+                strncpy(instance->last_compile_error.syntax_error_explanation, "cond requires blocks enclosed in parenthesis (<condition> <result...>)", sizeof(instance->last_compile_error.syntax_error_explanation) - 1);
                 SYNTAX_ERROR_INSTANCE(instance, current_token->line, current_token->column, current_token->file);
                 return RIAT_COMPILE_SYNTAX_ERROR;
             }
@@ -1034,45 +1036,63 @@ static RIAT_CompileResult read_block(
 
             /* Get the condition */
             size_t if_expression_node_index;
-            read_next_element(instance, tokens, ti, nodes, current_script_info, &if_expression_node_index);
+
+            RIAT_CompileResult result = read_next_element(instance, tokens, ti, nodes, current_script_info, &if_expression_node_index);
+            if(result != RIAT_COMPILE_OK) {
+                return result;
+            }
 
             if(tokens[*ti].parenthesis == -1) {
-                strncpy(instance->last_compile_error.syntax_error_explanation, "cond requires a return value after the condition (<condition> <result>)", sizeof(instance->last_compile_error.syntax_error_explanation) - 1);
+                strncpy(instance->last_compile_error.syntax_error_explanation, "cond requires a return value after the condition (<condition> <result...>)", sizeof(instance->last_compile_error.syntax_error_explanation) - 1);
                 SYNTAX_ERROR_INSTANCE(instance, current_token->line, current_token->column, current_token->file);
                 return RIAT_COMPILE_SYNTAX_ERROR;
             }
 
-            /* And now the result */
+            /* And now the result - add a "begin" block here with the contents being everything in this block */
             size_t then_expression_node_index;
-            read_next_element(instance, tokens, ti, nodes, current_script_info, &then_expression_node_index);
+            result = read_block(instance, tokens, ti, nodes, current_script_info, &then_expression_node_index, true);
+            if(result != RIAT_COMPILE_OK) {
+                return result;
+            }
 
-            /* Now for the function call */
+            /* Make our begin function name now. */
+            size_t begin_function_name_index = append_node_to_node_array(nodes, "begin");
+            if(begin_function_name_index == APPEND_NODE_ALLOCATION_ERROR) {
+                return RIAT_COMPILE_ALLOCATION_ERROR;
+            }
+            nodes->nodes[begin_function_name_index].is_primitive = true;
+
+            /* We already have the function call from the then_expression_node_index, so we can slot the 'begin' block at the start here */
+            size_t previous_child = nodes->nodes[then_expression_node_index].child_node;
+            nodes->nodes[then_expression_node_index].child_node = begin_function_name_index;
+            nodes->nodes[begin_function_name_index].next_node = previous_child;
+
+            /* Make this an if statement */
+            size_t if_fn_name_call_index = append_node_to_node_array(nodes, "if");
+            if(if_fn_name_call_index == APPEND_NODE_ALLOCATION_ERROR) {
+                return RIAT_COMPILE_ALLOCATION_ERROR;
+            }
+            nodes->nodes[if_fn_name_call_index].is_primitive = true;
+
             size_t if_fn_call_index = append_node_to_node_array(nodes, NULL);
             if(if_fn_call_index == APPEND_NODE_ALLOCATION_ERROR) {
                 return RIAT_COMPILE_ALLOCATION_ERROR;
             }
 
-            /* And the function name? */
-            size_t if_fn_name_call_index = append_node_to_node_array(nodes, "if");
-            if(if_fn_name_call_index == APPEND_NODE_ALLOCATION_ERROR) {
-                return RIAT_COMPILE_ALLOCATION_ERROR;
-            }
+            /* Associate that function name with the call */
+            nodes->nodes[if_fn_call_index].child_node = if_fn_name_call_index;
 
-            /* (if expression_node then_node) */
-            RIAT_Node *if_fn_call_node = &nodes->nodes[if_fn_call_index];
-            RIAT_Node *if_fn_name_call_node = &nodes->nodes[if_fn_name_call_index];
-            if_fn_name_call_node->is_primitive = true;
+            /* And then put the 'result' expression after the condition */
+            nodes->nodes[if_fn_name_call_index].next_node = if_expression_node_index;
+            nodes->nodes[if_expression_node_index].next_node = then_expression_node_index;
 
-            RIAT_Node *expression_node = &nodes->nodes[if_expression_node_index];
-
-            if_fn_call_node->child_node = if_fn_name_call_index;
-            if_fn_name_call_node->next_node = if_expression_node_index;
-            expression_node->next_node = then_expression_node_index;
-
+            /* If we don't have a root note set, that if statement looks like a good one */
             if(!root_node_set) {
                 *root_node = if_fn_call_index;
                 root_node_set = true;
             }
+
+            /* Otherwise, set the next node of our last if block (the "else") to the new if block we just made */
             else {
                 /* add the 'else' node if we have another node here */
                 nodes->nodes[else_node_predecessor].next_node = if_fn_call_index;
@@ -1080,8 +1100,6 @@ static RIAT_CompileResult read_block(
 
             else_node_predecessor = then_expression_node_index;
 
-            /* Increment 1 more to look at the next block (or end) */
-            (*ti)++;
             current_token = &tokens[*ti];
         }
     }
