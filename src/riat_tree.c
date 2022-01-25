@@ -134,9 +134,11 @@ static void recursively_disable_node(RIAT_NodeArrayContainer *nodes, size_t firs
 
 #define CONVERT_TYPE_OR_DIE(preferred_type, actual_type, line, column, file) \
     if(preferred_type != actual_type) { \
-        if( \
-            /* Passthrough is always OK */ \
-            (preferred_type == RIAT_VALUE_TYPE_PASSTHROUGH) || \
+        /* Passthrough is always OK */ \
+        if(preferred_type == RIAT_VALUE_TYPE_PASSTHROUGH) { \
+            preferred_type = actual_type; \
+        } \
+        else if( \
             /* Converting between real and int is OK */ \
             (preferred_type == RIAT_VALUE_TYPE_REAL && (actual_type == RIAT_VALUE_TYPE_LONG || actual_type == RIAT_VALUE_TYPE_SHORT)) || \
             (actual_type == RIAT_VALUE_TYPE_REAL && (preferred_type == RIAT_VALUE_TYPE_LONG || preferred_type == RIAT_VALUE_TYPE_SHORT)) || \
@@ -554,6 +556,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
         /* Everything else... */
         else {
             bool return_type_is_passthrough = n->type == RIAT_VALUE_TYPE_PASSTHROUGH;
+            n->type = preferred_type;
 
             for(size_t element = function_name_node->next_node; element != NEXT_NODE_NULL; argument_index++) {
                 assert(element < nodes->nodes_count);
@@ -579,16 +582,15 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
                 RIAT_ValueType this_element_preferred_type = parameter->type;
 
                 /* If the last element is passthrough and the type changes, then there is some special behavior here */
-                if(parameter->type == RIAT_VALUE_TYPE_PASSTHROUGH && return_type_is_passthrough) {
+                if(this_element_preferred_type == RIAT_VALUE_TYPE_PASSTHROUGH && return_type_is_passthrough) {
                     /* If it's not the last type and we only passthrough the last, then it's void */
                     if(parameter->passthrough_last && element_node->next_node != NEXT_NODE_NULL) {
                         this_element_preferred_type = RIAT_VALUE_TYPE_VOID;
                     }
 
-                    /* Otherwise, it's the preferred type */
+                    /* Otherwise, set to our return value */
                     else {
-                        this_element_preferred_type = preferred_type;
-                        n->type = this_element_preferred_type;
+                        this_element_preferred_type = n->type;
                     }
                 }
 
@@ -598,8 +600,18 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
                     return result;
                 }
 
+                if(return_type_is_passthrough && this_element_preferred_type == RIAT_VALUE_TYPE_PASSTHROUGH) {
+                    n->type = nodes->nodes[element].type;
+                }
+
+                /* We should know the type of our element now */
+                assert(nodes->nodes[element].type != RIAT_VALUE_TYPE_PASSTHROUGH);
+
                 element = element_node->next_node;
             }
+
+            /* We should know the type by now */
+            assert(n->type != RIAT_VALUE_TYPE_PASSTHROUGH);
         }
 
         /* Not enough arguments? */
