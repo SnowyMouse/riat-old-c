@@ -238,14 +238,21 @@ const char *find_next_token(const char *script_source_data, size_t source_data_l
                     break;
                 }
 
-                /* Single line comments break with a newline */
-                if(!is_multiline_comment && script_source_data[0] == '\n') {
-                    break;
-                }
+                bool is_newline = *script_source_data == '\n';
 
                 source_data_length--;
                 script_source_data++;
                 (*current_column)++;
+
+                /* If we're a newline, break if not a multiline comment. Otherwise, increment the line by 1 and reset column as usual */
+                if(is_newline) {
+                    (*current_column) = 1;
+                    (*current_line)++;
+
+                    if(!is_multiline_comment) {
+                        break;
+                    }
+                }
             }
 
             continue;
