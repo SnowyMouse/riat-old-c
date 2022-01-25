@@ -209,13 +209,40 @@ const char *find_next_token(const char *script_source_data, size_t source_data_l
             return script_source_data;
         }
 
-        /* Comments */
+        /* Comments (; for single line and ;* *; for multi-line) */
         if(*script_source_data == ';') {
+            /* If we're searching for a word, break now. We'll come back to this next iteration! */
             if(searching_word_start) {
                 break;
             }
 
-            while(*script_source_data != '\n' && source_data_length > 0) {
+            bool is_multiline_comment = false;
+            size_t emergency_exit = 0;
+
+            /* If it's a ;* instead of just a ;, we've entered a multi-line comment */
+            if(source_data_length > 2) {
+                is_multiline_comment = (script_source_data[1] == '*');
+                emergency_exit = is_multiline_comment ? 1 : 0;
+
+                source_data_length -= 2;
+                script_source_data += 2;
+                (*current_column) += 2;
+            }
+
+            while(source_data_length > emergency_exit) {
+                /* Multi line comments break with a *; */
+                if(is_multiline_comment && script_source_data[0] == '*' && script_source_data[1] == ';') {
+                    source_data_length -= 2;
+                    script_source_data += 2;
+                    (*current_column) += 2;
+                    break;
+                }
+
+                /* Single line comments break with a newline */
+                if(!is_multiline_comment && script_source_data[0] == '\n') {
+                    break;
+                }
+
                 source_data_length--;
                 script_source_data++;
                 (*current_column)++;
