@@ -11,7 +11,7 @@
 
 #define APPEND_NODE_ALLOCATION_ERROR SIZE_MAX
 
-static size_t append_node_to_node_array(RIAT_NodeArrayContainer *container, const char *string_data);
+static size_t append_node_to_node_array(RIAT_NodeArrayContainer *container, const char *string_data, size_t file, size_t line, size_t column);
 
 static RIAT_CompileResult read_block(
     RIAT_Instance *instance,
@@ -180,6 +180,7 @@ static void debug_verify_no_unparsed(const RIAT_NodeArrayContainer *nodes, size_
     #ifndef NDEBUG
     RIAT_Node *n = &nodes->nodes[node_to_check];
     assert(n->type != RIAT_VALUE_TYPE_UNPARSED);
+    assert(n->type != RIAT_VALUE_TYPE_PASSTHROUGH);
 
     if(n->next_node != NEXT_NODE_NULL) {
         debug_verify_no_unparsed(nodes, n->next_node);
@@ -584,7 +585,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
                         this_element_preferred_type = RIAT_VALUE_TYPE_VOID;
                     }
 
-                    /* Otherwise it's the preferred type */
+                    /* Otherwise, it's the preferred type */
                     else {
                         this_element_preferred_type = preferred_type;
                         n->type = this_element_preferred_type;
@@ -825,7 +826,7 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
             /* Implicitly add a begin block if we need to */
             if(add_begin_block) {
                 size_t original_first_node_index = node_array.nodes[root_node_index].child_node;
-                size_t begin_name = append_node_to_node_array(&node_array, "begin");
+                size_t begin_name = append_node_to_node_array(&node_array, "begin", block_type_token->file, block_type_token->line, block_type_token->column);
                 if(begin_name == APPEND_NODE_ALLOCATION_ERROR) {
                     result = RIAT_COMPILE_ALLOCATION_ERROR;
                     goto end;
@@ -1056,7 +1057,7 @@ static RIAT_CompileResult read_block(
             }
 
             /* Make our begin function name now. */
-            size_t begin_function_name_index = append_node_to_node_array(nodes, "begin");
+            size_t begin_function_name_index = append_node_to_node_array(nodes, "begin", current_token->file, current_token->line, current_token->column);
             if(begin_function_name_index == APPEND_NODE_ALLOCATION_ERROR) {
                 return RIAT_COMPILE_ALLOCATION_ERROR;
             }
@@ -1068,13 +1069,13 @@ static RIAT_CompileResult read_block(
             nodes->nodes[begin_function_name_index].next_node = previous_child;
 
             /* Make this an if statement */
-            size_t if_fn_name_call_index = append_node_to_node_array(nodes, "if");
+            size_t if_fn_name_call_index = append_node_to_node_array(nodes, "if", current_token->file, current_token->line, current_token->column);
             if(if_fn_name_call_index == APPEND_NODE_ALLOCATION_ERROR) {
                 return RIAT_COMPILE_ALLOCATION_ERROR;
             }
             nodes->nodes[if_fn_name_call_index].is_primitive = true;
 
-            size_t if_fn_call_index = append_node_to_node_array(nodes, NULL);
+            size_t if_fn_call_index = append_node_to_node_array(nodes, NULL, current_token->file, current_token->line, current_token->column);
             if(if_fn_call_index == APPEND_NODE_ALLOCATION_ERROR) {
                 return RIAT_COMPILE_ALLOCATION_ERROR;
             }
@@ -1106,7 +1107,7 @@ static RIAT_CompileResult read_block(
 
     else {
         /* Push the root node */
-        if((*root_node = append_node_to_node_array(nodes, NULL)) == APPEND_NODE_ALLOCATION_ERROR) {
+        if((*root_node = append_node_to_node_array(nodes, NULL, current_token->file, current_token->line, current_token->column)) == APPEND_NODE_ALLOCATION_ERROR) {
             return RIAT_COMPILE_ALLOCATION_ERROR;
         }
 
@@ -1157,7 +1158,7 @@ static RIAT_CompileResult read_next_element(
     assert(first_token->parenthesis != -1);
 
     if(first_token->parenthesis == 0) {
-        if((*node = append_node_to_node_array(nodes, first_token->token_string)) == APPEND_NODE_ALLOCATION_ERROR) {
+        if((*node = append_node_to_node_array(nodes, first_token->token_string, first_token->file, first_token->line, first_token->column)) == APPEND_NODE_ALLOCATION_ERROR) {
             return RIAT_COMPILE_ALLOCATION_ERROR;
         }
     }
@@ -1172,14 +1173,11 @@ static RIAT_CompileResult read_next_element(
     }
         
     RIAT_Node *element_node = &nodes->nodes[*node];
-    element_node->column = first_token->column;
-    element_node->line = first_token->line;
-    element_node->file = first_token->file;
     element_node->is_primitive = (first_token->parenthesis == 0);
     return RIAT_COMPILE_OK;
 }
 
-static size_t append_node_to_node_array(RIAT_NodeArrayContainer *container, const char *string_data) {
+static size_t append_node_to_node_array(RIAT_NodeArrayContainer *container, const char *string_data, size_t file, size_t line, size_t column) {
     /* Capacity met? If so, reallocate with double size (or set to 16 if size is 0) */
     if(container->nodes_capacity == container->nodes_count) {
         size_t new_capacity = container->nodes_capacity > 0 ? container->nodes_capacity * 2 : 16;
@@ -1202,5 +1200,8 @@ static size_t append_node_to_node_array(RIAT_NodeArrayContainer *container, cons
     memset(next_node, 0, sizeof(*next_node));
     next_node->next_node = NEXT_NODE_NULL;
     next_node->string_data = string_data != NULL ? riat_strdup(string_data) : NULL;
+    next_node->file = file;
+    next_node->line = line;
+    next_node->column = column;
     return next_node_index;
 }
