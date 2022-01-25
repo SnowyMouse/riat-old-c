@@ -51,14 +51,15 @@ const RIAT_BuiltinDefinition *riat_builtin_definition_search(const char *what, R
             /* Otherwise return it */
             return object;
         }
-        else if(start == end) {
-            return NULL;
-        }
         else if(comparison > 0) {
             start = middle + 1;
         }
         else {
             end = middle;
+        }
+
+        if(start == end) {
+            return NULL;
         }
     }
 }
