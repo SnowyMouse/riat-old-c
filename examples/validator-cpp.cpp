@@ -2,7 +2,7 @@
 #include "../include/riat/riat.hpp"
 
 static void warn(RIAT_Instance *instance, const char *message, const char *file, std::size_t line, std::size_t column) {
-    std::printf("%s:%zu:%zu: warning: %s\n", file, line, column, message);
+    std::fprintf(stderr, "%s:%zu:%zu: warning: %s\n", file, line, column, message);
 }
 
 int main(int argc, const char **argv) {
