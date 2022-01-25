@@ -169,15 +169,6 @@ typedef struct ScriptGlobalLookup {
     };
 } ScriptGlobalLookup;
 
-static bool case_insensitive_string_equals(const char *a, const char *b) {
-    while(*a && *b && tolower(*a) == tolower(*b)) {
-        a++;
-        b++;
-    }
-
-    return *a == *b;
-}
-
 static void lowercase_string(char *s) {
     while(*s) {
         *s = tolower(*s);
@@ -203,7 +194,7 @@ static bool get_global(ScriptGlobalLookup *output, const char *name, const RIAT_
     /* Search local */
     for(size_t g = 0; g < script_globals->global_count; g++) {
         const RIAT_Global *global = &script_globals->globals[g];
-        if(case_insensitive_string_equals(global->name, name)) {
+        if(riat_case_insensitive_strcmp(global->name, name) == 0) {
             output->is_definition = false;
             output->global_local = global;
             output->value_type = global->value_type;
@@ -227,7 +218,7 @@ static bool get_function(ScriptGlobalLookup *output, const char *name, const RIA
     /* Search local */
     for(size_t s = 0; s < script_globals->script_count; s++) {
         const RIAT_Script *script = &script_globals->scripts[s];
-        if(case_insensitive_string_equals(script->name, name)) {
+        if(riat_case_insensitive_strcmp(script->name, name) == 0) {
             output->is_definition = false;
             output->script_local = script;
             output->value_type = script->return_type;
@@ -360,8 +351,9 @@ static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_
                 break;
             case RIAT_VALUE_TYPE_SCRIPT:
                 for(size_t s = 0; s < script_globals->script_count; s++) {
-                    if(strcmp(n->string_data, script_globals->scripts[s].name) == 0) {
+                    if(riat_case_insensitive_strcmp(n->string_data, script_globals->scripts[s].name) == 0) {
                         n->short_int = (int16_t)(s);
+                        lowercase_string(n->string_data);
                         goto end;
                     }
                 }

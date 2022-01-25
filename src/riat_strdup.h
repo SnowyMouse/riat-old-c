@@ -27,4 +27,16 @@ char *riat_strdup(const char *input);
  */
 char *riat_strndup(const char *input, size_t len);
 
+
+
+/**
+ * Do a case-insensitive string comparison
+ * 
+ * @param a string a
+ * @param b string b
+ * 
+ * @return  comparison (0 if equal, >0 if a is greater, <0 if a is less)
+ */
+int riat_case_insensitive_strcmp(const char *a, const char *b);
+
 #endif

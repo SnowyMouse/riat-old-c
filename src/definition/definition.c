@@ -1,5 +1,7 @@
 #include "definition_array.h"
 
+#include "../riat_strdup.h"
+
 const RIAT_BuiltinDefinition *riat_builtin_definition_search(const char *what, RIAT_CompileTarget compile_target, RIAT_BuiltinDefinitionType type) {
     /* Binary search */
     size_t end = sizeof(definitions) / sizeof(definitions[0]);
@@ -10,7 +12,7 @@ const RIAT_BuiltinDefinition *riat_builtin_definition_search(const char *what, R
         size_t middle = (start + end) / 2;
 
         const RIAT_BuiltinDefinition *object = &definitions[middle];
-        int comparison = strcmp(what, object->name);
+        int comparison = riat_case_insensitive_strcmp(what, object->name);
         if(comparison == 0) {
             /* If the type isn't correct, skip it */
             if(type != RIAT_BUILTIN_DEFINITION_TYPE_ANY && object->type != type) {

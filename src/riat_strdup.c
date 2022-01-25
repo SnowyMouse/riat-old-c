@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 char *riat_strdup(const char *input) {
     /* Get the length */
@@ -40,4 +41,13 @@ char *riat_strndup(const char *input, size_t len) {
 
     /* Done */
     return str;
+}
+
+int riat_case_insensitive_strcmp(const char *a, const char *b) {
+    while(*a != 0 && *b != 0 && tolower(*a) == tolower(*b)) {
+        a++;
+        b++;
+    }
+
+    return tolower(*a) - tolower(*b);
 }
