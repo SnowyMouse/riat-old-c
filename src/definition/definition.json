@@ -749,7 +749,8 @@
             "description": "prints a string to the console.",
             "parameters": [
                 {
-                    "type": "string"
+                    "type": "string",
+                    "allow_uppercase": true
                 }
             ],
             "engines": {
@@ -769,7 +770,8 @@
                     "type": "boolean"
                 },
                 {
-                    "type": "string"
+                    "type": "string",
+                    "allow_uppercase": true
                 }
             ],
             "engines": {
@@ -782,7 +784,8 @@
             "description": "prints a string to the hs log file.",
             "parameters": [
                 {
-                    "type": "string"
+                    "type": "string",
+                    "allow_uppercase": true
                 }
             ],
             "engines": {

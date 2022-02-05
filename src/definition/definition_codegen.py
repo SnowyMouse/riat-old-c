@@ -32,11 +32,12 @@ for n in everything:
     def format_parameters(w):
         r = ",.parameters={"
         for p in w:
-            r = r + "{{.type={type},.optional={optional},.many={many},.passthrough_last={passthrough_last}}},".format(
+            r = r + "{{.type={type},.optional={optional},.many={many},.passthrough_last={passthrough_last},.allow_uppercase={allow_uppercase}}},".format(
                 type=format_value_type(p["type"]),
                 optional="true" if "optional" in p and p["optional"] else "false",
                 many="true" if "many" in p and p["many"] else "false",
-                passthrough_last="true" if "passthrough_last" in p and p["passthrough_last"] else "false"
+                passthrough_last="true" if "passthrough_last" in p and p["passthrough_last"] else "false",
+                allow_uppercase="true" if "allow_uppercase" in p and p["allow_uppercase"] else "false"
             )
         return r + "}"
 

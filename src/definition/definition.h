@@ -17,6 +17,7 @@ typedef struct RIAT_BuiltinFunctionParameter {
     bool optional;
     bool many;
     bool passthrough_last;
+    bool allow_uppercase;
 } RIAT_BuiltinFunctionParameter;
 
 typedef struct RIAT_BuiltinDefinition {

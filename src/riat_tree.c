@@ -281,7 +281,7 @@ static bool resolve_node_to_function_call(ScriptGlobalLookup *lookup, RIAT_NodeA
     }
 }
 
-static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_NodeArrayContainer *nodes, size_t node, RIAT_ValueType preferred_type, const RIAT_ScriptGlobalArrayContainer *script_globals) {
+static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_NodeArrayContainer *nodes, size_t node, RIAT_ValueType preferred_type, const RIAT_ScriptGlobalArrayContainer *script_globals, bool allow_uppercase) {
     RIAT_Node *n = &nodes->nodes[node];
     bool should_lowercase = true;
 
@@ -365,7 +365,7 @@ static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_
                 return RIAT_COMPILE_SYNTAX_ERROR;
 
             case RIAT_VALUE_TYPE_STRING:
-                should_lowercase = false;
+                should_lowercase = !allow_uppercase;
                 break;
 
             case RIAT_VALUE_TYPE_PASSTHROUGH:
@@ -474,7 +474,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
                     n->type = nodes->nodes[parameter_elements[0]].type;
                     
                     /* Try it */
-                    RIAT_CompileResult result = resolve_type_of_element(instance, nodes, parameter_elements[1], n->type, script_globals);
+                    RIAT_CompileResult result = resolve_type_of_element(instance, nodes, parameter_elements[1], n->type, script_globals, false);
                     if(result != RIAT_COMPILE_OK) {
                         return result;
                     }
@@ -494,14 +494,14 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
 
                     /* If one is a global... */
                     if(g0 != NULL && g1 == NULL) {
-                        RIAT_CompileResult result = resolve_type_of_element(instance, nodes, e1, n0->type, script_globals);
+                        RIAT_CompileResult result = resolve_type_of_element(instance, nodes, e1, n0->type, script_globals, false);
                         if(result != RIAT_COMPILE_OK) {
                             return result;
                         }
                     }
 
                     else if(g1 != NULL && g0 == NULL) {
-                        RIAT_CompileResult result = resolve_type_of_element(instance, nodes, e0, n1->type, script_globals);
+                        RIAT_CompileResult result = resolve_type_of_element(instance, nodes, e0, n1->type, script_globals, false);
                         if(result != RIAT_COMPILE_OK) {
                             return result;
                         }
@@ -540,11 +540,11 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
                         }
 
                         RIAT_CompileResult result;
-                        result = resolve_type_of_element(instance, nodes, e0, test_type, script_globals);
+                        result = resolve_type_of_element(instance, nodes, e0, test_type, script_globals, false);
                         if(result != RIAT_COMPILE_OK) {
                             return result;
                         }
-                        result = resolve_type_of_element(instance, nodes, e1, test_type, script_globals);
+                        result = resolve_type_of_element(instance, nodes, e1, test_type, script_globals, false);
                         if(result != RIAT_COMPILE_OK) {
                             return result;
                         }
@@ -595,7 +595,7 @@ static RIAT_CompileResult resolve_type_of_block(RIAT_Instance *instance, RIAT_No
                 }
 
                 /* Punch it! */
-                RIAT_CompileResult result = resolve_type_of_element(instance, nodes, element, this_element_preferred_type, script_globals);
+                RIAT_CompileResult result = resolve_type_of_element(instance, nodes, element, this_element_preferred_type, script_globals, parameter->allow_uppercase);
                 if(result != RIAT_COMPILE_OK) {
                     return result;
                 }
@@ -858,12 +858,12 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
     /* Resolve types for all nodes (auto-break if result is not OK) */
     for(size_t g = 0; g < script_global_list.global_count && result == RIAT_COMPILE_OK; g++) {
         RIAT_Global *global = &script_global_list.globals[g];
-        result = resolve_type_of_element(instance, &node_array, global->first_node, global->value_type, &script_global_list);
+        result = resolve_type_of_element(instance, &node_array, global->first_node, global->value_type, &script_global_list, false);
     }
 
     for(size_t s = 0; s < script_global_list.script_count && result == RIAT_COMPILE_OK; s++) {
         RIAT_Script *script = &script_global_list.scripts[s];
-        result = resolve_type_of_element(instance, &node_array, script->first_node, script->return_type, &script_global_list);
+        result = resolve_type_of_element(instance, &node_array, script->first_node, script->return_type, &script_global_list, false);
     }
 
     if(result != RIAT_COMPILE_OK) {
