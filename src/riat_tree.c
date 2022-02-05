@@ -887,44 +887,51 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
 
     /* Resolve stubbed functions */
     for(size_t s = 0; s < script_global_list.script_count; s++) {
-        bool should_remove = false;
+        while(s < script_global_list.script_count) { /* Loop until we break or we resolved the last stub */
+            bool should_remove = false;
 
-        RIAT_Script *script = &script_global_list.scripts[s];
-        if(script->script_type == RIAT_SCRIPT_TYPE_STUB) {
-            for(size_t t = 0; t < script_global_list.script_count; t++) {
-                if(t == s) {
-                    continue;
-                }
-                RIAT_Script *script_other = &script_global_list.scripts[t];
-
-                /* It's a match! */
-                if(strcmp(script_other->name, script->name) == 0) {
-                    if(script_other->script_type != RIAT_SCRIPT_TYPE_STATIC) {
-                        COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script_other->file, script_other->line, script_other->column, "cannot replace stub script '%s' with non-static script '%s'", script->name, script_other->name);
+            RIAT_Script *script = &script_global_list.scripts[s];
+            if(script->script_type == RIAT_SCRIPT_TYPE_STUB) {
+                for(size_t t = 0; t < script_global_list.script_count; t++) {
+                    if(t == s) {
+                        continue; /* don't compare the script against itself */
                     }
-                    else if(script_other->return_type != script->return_type) {
-                        COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script_other->file, script_other->line, script_other->column, "cannot replace stub script '%s' (returns %s) with script '%s' (returns %s)", script->name, riat_value_type_to_string(script->return_type), script_other->name, riat_value_type_to_string(script_other->return_type));
-                    }
+                    RIAT_Script *script_other = &script_global_list.scripts[t];
 
-                    should_remove = true;
-                    break;
+                    /* It's a match? */
+                    if(strcmp(script_other->name, script->name) == 0) {
+                        /* Make sure we can replace it */
+                        if(script_other->script_type != RIAT_SCRIPT_TYPE_STATIC) {
+                            COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script_other->file, script_other->line, script_other->column, "cannot replace stub script '%s' with non-static script '%s'", script->name, script_other->name);
+                        }
+                        else if(script_other->return_type != script->return_type) {
+                            COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, script_other->file, script_other->line, script_other->column, "cannot replace stub script '%s' (returns %s) with script '%s' (returns %s)", script->name, riat_value_type_to_string(script->return_type), script_other->name, riat_value_type_to_string(script_other->return_type));
+                        }
+
+                        /* Done! */
+                        should_remove = true;
+                        break;
+                    }
                 }
             }
-        }
 
-        /* Delete the script */
-        if(should_remove) {
-            recursively_disable_node(&node_array, script->first_node);
+            /* Delete the script? */
+            if(should_remove) {
+                recursively_disable_node(&node_array, script->first_node);
 
-            script_global_list.script_count--;
+                script_global_list.script_count--;
 
-            for(size_t t = s; t < script_global_list.script_count; t++) {
-                RIAT_Script *a = &script_global_list.scripts[t];
-                RIAT_Script *b = &script_global_list.scripts[t + 1];
-                memcpy(a, b, sizeof(*a));
+                for(size_t t = s; t < script_global_list.script_count; t++) {
+                    RIAT_Script *a = &script_global_list.scripts[t];
+                    RIAT_Script *b = &script_global_list.scripts[t + 1];
+                    memcpy(a, b, sizeof(*a));
+                }
+
+                /* Restart the loop iteration on s again */
+                continue;
             }
 
-            s--;
+            break;
         }
     }
 
