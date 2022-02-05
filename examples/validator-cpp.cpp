@@ -49,9 +49,9 @@ int main(int argc, const char **argv) {
     }
 
     // Show some metadata here
-    printf("Scripts: %zu\n", instance.get_scripts().size());
-    printf("Globals: %zu\n", instance.get_globals().size());
-    printf("Nodes: %zu\n", instance.get_nodes().size());
+    std::printf("Scripts: %zu\n", instance.get_scripts().size());
+    std::printf("Globals: %zu\n", instance.get_globals().size());
+    std::printf("Nodes: %zu\n", instance.get_nodes().size());
 
     return EXIT_SUCCESS;
 }
