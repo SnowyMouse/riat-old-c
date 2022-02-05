@@ -970,6 +970,45 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
                 COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, global_other->file, global_other->line, global_other->column, "multiple globals of the name '%s' exist", global->name);
             }
         }
+
+        /* Check if a script by the same name exists. If so, it's fine but we should warn */
+        for(size_t s = 0; s < script_global_list.script_count; s++) {
+            RIAT_Script *script = &script_global_list.scripts[s];
+            if(strcmp(script->name, global->name) == 0) {
+                char message[256];
+                snprintf(message, sizeof(message), "a global and script of the name '%s' already exists", global->name);
+
+                bool is_script_that_is_first = false;
+
+                /* Check if the first instance is a script or a global */
+                if(global->file > script->file) {
+                    is_script_that_is_first = true;
+                }
+                else if(global->file == script->file) {
+                    if(global->line > script->line) {
+                        is_script_that_is_first = true;
+                    }
+                    else if(global->line == script->line) {
+                        is_script_that_is_first = global->column > script->column;
+                    }
+                }
+
+                /* Show the next instance */
+                size_t file, column, line;
+                if(!is_script_that_is_first) {
+                    file = script->file;
+                    column = script->column;
+                    line = script->line;
+                }
+                else {
+                    file = global->file;
+                    column = global->column;
+                    line = global->line;
+                }
+
+                instance->warn_callback(instance, message, instance->files.file_names[file], line, column);
+            }
+        }
     }
 
     /* Clear the old results */
