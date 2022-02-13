@@ -169,12 +169,22 @@ const char *find_next_token(const char *script_source_data, size_t source_data_l
     const char *searching_word_start = NULL;
 
     while(source_data_length > 0) {
+        /* Did we hit a null terminator */
         if(*script_source_data == 0) {
-            info->line = *current_line;
-            info->column = *current_column;
-            info->is_error = true;
-            info->error_reason = "unexpected null terminator";
-            return NULL;
+            /* Is it NOT the last character? */
+            if(source_data_length != 1) {
+                info->line = *current_line;
+                info->column = *current_column;
+                info->is_error = true;
+                info->error_reason = "unexpected null byte in the middle of a source file";
+                return NULL;
+            }
+
+            /* Otherwise that's fine */
+            if(searching_word_start) {
+                break;
+            }
+            goto next_char_bump_counter;
         }
 
         /* Whitespace? */
