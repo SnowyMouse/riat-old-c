@@ -295,7 +295,7 @@ static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_
         /* Otherwise, convert the string I guess! */
         switch(preferred_type) {
             case RIAT_VALUE_TYPE_VOID:
-                RESOLVE_TYPE_OF_ELEMENT_FAIL("a void type was expected; got '%s' instead", n->string_data);
+                RESOLVE_TYPE_OF_ELEMENT_FAIL("a void value was expected; got '%s' instead", n->string_data);
             case RIAT_VALUE_TYPE_UNPARSED:
                 abort();
             case RIAT_VALUE_TYPE_BOOLEAN:
@@ -306,7 +306,7 @@ static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_
                     n->bool_int = 0;
                 }
                 else {
-                    RESOLVE_TYPE_OF_ELEMENT_FAIL("a boolean type (i.e. 'false'/'true'/'0'/'1'/'off'/'on') was expected; got '%s' instead", n->string_data);
+                    RESOLVE_TYPE_OF_ELEMENT_FAIL("expected a boolean value (i.e. 'false'/'true'/'0'/'1'/'off'/'on'); got '%s' instead", n->string_data);
                 }
                 free(n->string_data);
                 n->string_data = NULL;
@@ -316,7 +316,7 @@ static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_
                     char *end = NULL;
                     n->real = strtof(n->string_data, &end);
                     if(end == n->string_data) {
-                        RESOLVE_TYPE_OF_ELEMENT_FAIL("a real type was expected; got '%s' instead", n->string_data);
+                        RESOLVE_TYPE_OF_ELEMENT_FAIL("a real value was expected; got '%s' instead", n->string_data);
                     }
                 }
                 free(n->string_data);
@@ -327,10 +327,10 @@ static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_
                     char *end = NULL;
                     long long v = strtoll(n->string_data, &end, 10);
                     if(end == n->string_data) {
-                        RESOLVE_TYPE_OF_ELEMENT_FAIL("a short type was expected; got '%s' instead", n->string_data);
+                        RESOLVE_TYPE_OF_ELEMENT_FAIL("a short value was expected; got '%s' instead", n->string_data);
                     }
                     if(v < INT16_MIN || v > INT16_MAX) {
-                        RESOLVE_TYPE_OF_ELEMENT_FAIL("a short type was expected; got '%s' (out of range) instead", n->string_data);
+                        RESOLVE_TYPE_OF_ELEMENT_FAIL("a short value was expected; got '%s' (out of range) instead", n->string_data);
                     }
                     n->short_int = (short)v;
                 }
@@ -342,10 +342,10 @@ static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_
                     char *end = NULL;
                     long long v = strtoll(n->string_data, &end, 10);
                     if(end == n->string_data) {
-                        RESOLVE_TYPE_OF_ELEMENT_FAIL("a long type was expected; got '%s' instead", n->string_data);
+                        RESOLVE_TYPE_OF_ELEMENT_FAIL("a long value was expected; got '%s' instead", n->string_data);
                     }
                     if(v < INT32_MIN || v > INT32_MAX) {
-                        RESOLVE_TYPE_OF_ELEMENT_FAIL("a long type was expected; got '%s' (out of range) instead", n->string_data);
+                        RESOLVE_TYPE_OF_ELEMENT_FAIL("a long value was expected; got '%s' (out of range) instead", n->string_data);
                     }
                     n->long_int = (long)v;
                 }
@@ -363,6 +363,39 @@ static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_
                 snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "expected a script name; got '%s' instead", n->string_data);
                 SYNTAX_ERROR_INSTANCE(instance, n->line, n->column, n->file);
                 return RIAT_COMPILE_SYNTAX_ERROR;
+
+            case RIAT_VALUE_TYPE_TEAM:
+                if(riat_case_insensitive_strcmp(n->string_data, "player") == 0) {
+                    n->short_int = 1;
+                }
+                else if(riat_case_insensitive_strcmp(n->string_data, "human") == 0) {
+                    n->short_int = 2;
+                }
+                else if(riat_case_insensitive_strcmp(n->string_data, "covenant") == 0) {
+                    n->short_int = 3;
+                }
+                else if(riat_case_insensitive_strcmp(n->string_data, "flood") == 0) {
+                    n->short_int = 4;
+                }
+                else if(riat_case_insensitive_strcmp(n->string_data, "sentinel") == 0) {
+                    n->short_int = 5;
+                }
+                else if(riat_case_insensitive_strcmp(n->string_data, "unused6") == 0) {
+                    n->short_int = 6;
+                }
+                else if(riat_case_insensitive_strcmp(n->string_data, "unused7") == 0) {
+                    n->short_int = 7;
+                }
+                else if(riat_case_insensitive_strcmp(n->string_data, "unused8") == 0) {
+                    n->short_int = 8;
+                }
+                else if(riat_case_insensitive_strcmp(n->string_data, "unused9") == 0) {
+                    n->short_int = 9;
+                }
+                else {
+                    RESOLVE_TYPE_OF_ELEMENT_FAIL("expected a team value (i.e. 'player'/'human'/'covenant'/'flood'/'unused6'/'unused7'/'unused8'/'unused9'); got '%s' instead", n->string_data);
+                }
+                break;
 
             case RIAT_VALUE_TYPE_STRING:
                 should_lowercase = !allow_uppercase;
