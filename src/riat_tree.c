@@ -352,6 +352,7 @@ static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_
                 free(n->string_data);
                 n->string_data = NULL;
                 break;
+
             case RIAT_VALUE_TYPE_SCRIPT:
                 for(size_t s = 0; s < script_globals->script_count; s++) {
                     if(riat_case_insensitive_strcmp(n->string_data, script_globals->scripts[s].name) == 0) {
@@ -363,6 +364,24 @@ static RIAT_CompileResult resolve_type_of_element(RIAT_Instance *instance, RIAT_
                 snprintf(instance->last_compile_error.syntax_error_explanation, sizeof(instance->last_compile_error.syntax_error_explanation), "expected a script name; got '%s' instead", n->string_data);
                 SYNTAX_ERROR_INSTANCE(instance, n->line, n->column, n->file);
                 return RIAT_COMPILE_SYNTAX_ERROR;
+
+            case RIAT_VALUE_TYPE_GAME_DIFFICULTY:
+                if(riat_case_insensitive_strcmp(n->string_data, "easy") == 0) {
+                    n->short_int = 0;
+                }
+                else if(riat_case_insensitive_strcmp(n->string_data, "normal") == 0) {
+                    n->short_int = 1;
+                }
+                else if(riat_case_insensitive_strcmp(n->string_data, "hard") == 0) {
+                    n->short_int = 2;
+                }
+                else if(riat_case_insensitive_strcmp(n->string_data, "impossible") == 0) {
+                    n->short_int = 3;
+                }
+                else {
+                    RESOLVE_TYPE_OF_ELEMENT_FAIL("expected a difficulty value (i.e. 'easy'/'normal'/'hard'/'impossible'); got '%s' instead", n->string_data);
+                }
+                break;
 
             case RIAT_VALUE_TYPE_TEAM:
                 if(riat_case_insensitive_strcmp(n->string_data, "player") == 0) {
