@@ -147,6 +147,9 @@ static void recursively_disable_node(RIAT_NodeArrayContainer *nodes, size_t firs
             (preferred_type == RIAT_VALUE_TYPE_SHORT && actual_type == RIAT_VALUE_TYPE_LONG) || \
             (preferred_type == RIAT_VALUE_TYPE_BOOLEAN && (actual_type == RIAT_VALUE_TYPE_LONG || actual_type == RIAT_VALUE_TYPE_SHORT)) || \
             \
+            /* Converting from a vehicle to a unit is OK */ \
+            (preferred_type == RIAT_VALUE_TYPE_UNIT && actual_type == RIAT_VALUE_TYPE_VEHICLE) \
+            \
             /* Converting from an object to something else is OK */ \
             ((preferred_type == RIAT_VALUE_TYPE_OBJECT || preferred_type == RIAT_VALUE_TYPE_OBJECT_LIST) && (actual_type == RIAT_VALUE_TYPE_OBJECT || actual_type == RIAT_VALUE_TYPE_UNIT || actual_type == RIAT_VALUE_TYPE_WEAPON || actual_type == RIAT_VALUE_TYPE_SCENERY || actual_type == RIAT_VALUE_TYPE_VEHICLE || actual_type == RIAT_VALUE_TYPE_DEVICE)) \
         ) \
