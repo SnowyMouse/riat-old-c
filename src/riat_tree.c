@@ -925,6 +925,36 @@ RIAT_CompileResult riat_tree(RIAT_Instance *instance) {
         goto end;
     }
 
+    /* Make sure tag paths do NOT have forward slashes */
+    for(size_t n = 0; n < node_array.nodes_count; n++) {
+        RIAT_Node *node = &node_array.nodes[n];
+
+        /* Skip these */
+        if(!node->is_primitive || node->is_global) {
+            continue;
+        }
+
+        /* Check the type */
+        switch(node_array.nodes[n].type) {
+            case RIAT_VALUE_TYPE_SOUND:
+            case RIAT_VALUE_TYPE_EFFECT:
+            case RIAT_VALUE_TYPE_DAMAGE:
+            case RIAT_VALUE_TYPE_LOOPING_SOUND:
+            case RIAT_VALUE_TYPE_ANIMATION_GRAPH:
+            case RIAT_VALUE_TYPE_ACTOR_VARIANT:
+            case RIAT_VALUE_TYPE_DAMAGE_EFFECT:
+            case RIAT_VALUE_TYPE_OBJECT_DEFINITION:
+                for(const char *c = node->string_data; *c != 0; c++) {
+                    if(*c == '/') {
+                        COMPILE_RETURN_ERROR(RIAT_COMPILE_SYNTAX_ERROR, node->file, node->line, node->column, "tag path '%s' contains a '/' path separator which is not permitted in script source (only '\\' is valid)", node->string_data);
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
     /* Verify no script or global tree has an unparsed node somewhere */
     #define VERIFY_NO_UNPARSED \
     if(node_array.nodes_count > 0) { \
