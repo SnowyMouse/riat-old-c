@@ -1,7 +1,7 @@
 # Rat In a Tube
 
 NOTE: This project is deprecated and should not be used with anything serious. Use
-[https://github.com/SnowyMouse/hiat](Hamster in a Tube) instead!
+[Hamster in a Tube](https://github.com/SnowyMouse/hiat) instead!
 
 RIAT is a free script compiler for Halo: Combat Evolved scripts.
 
